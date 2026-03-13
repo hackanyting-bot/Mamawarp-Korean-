@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOREAN MAMA WRAP - Order System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #fdfaf5; color: #333; margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 2px solid #a52a2a; }
+        h2 { text-align: center; color: #a52a2a; margin: 0; text-transform: uppercase; }
+        .menu-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+        .price { color: #d32f2f; font-weight: bold; float: right; }
+        .section-title { font-weight: bold; margin-top: 10px; display: block; color: #5d4037; font-size: 1.1em; }
+        label { display: block; margin: 12px 0; cursor: pointer; transition: 0.2s; }
+        input[type="radio"], input[type="checkbox"] { margin-right: 12px; transform: scale(1.3); accent-color: #d32f2f; }
+        .input-text { width: 100%; padding: 12px; margin-top: 5px; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .total-box { background: #fff3e0; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center; border: 1px solid #ffcc80; }
+        #total_display { font-size: 1.5em; color: #d32f2f; font-weight: bold; }
+        button { width: 100%; background-color: #d32f2f; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 4px #8b0000; }
+        button:disabled { background-color: #ccc; box-shadow: none; }
+
+        /* Modal สำหรับสรุปยอดและ QR Code */
+        #paymentModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 25px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .qr-image { 
+            width: 100%; 
+            max-width: 280px; 
+            margin: 15px auto; 
+            border: 2px solid #eee; 
+            border-radius: 15px; 
+            display: block;
+        }
+        .summary-header { color: #2e7d32; font-size: 1.5em; font-weight: 600; margin-bottom: 10px; }
+        .summary-detail { font-size: 1.1em; line-height: 1.6; margin-bottom: 15px; }
+        .close-btn { 
+            background: #444; 
+            margin-top: 15px; 
+            padding: 12px; 
+            font-size: 1em;
+            box-shadow: 0 4px #222;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>KOREAN MAMA WRAP</h2>
+    <p style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ โดย <b>cittamama bot</b></p>
+
+    <form id="orderForm">
+        <div class="menu-item">
+            <span class="section-title">🍜 เลือกเมนูหลัก (หมวด 69.-)</span>
+            <label><input type="radio" name="main_menu" value="มาม่าไข่เค็ม" data-price="69" onchange="calculateTotal()"> มาม่าไข่เค็ม <span class="price">69.-</span></label>
+            <label><input type="radio" name="main_menu" value="มาม่าจีนสีดำ" data-price="69" onchange="calculateTotal()"> มาม่าจีนสีดำ <span class="price">69.-</span></label>
+            <label><input type="radio" name="main_menu" value="มาม่าจีนสีชมพู" data-price="69" onchange="calculateTotal()"> มาม่าจีนสีชมพู <span class="price">69.-</span></label>
+            <label><input type="radio" name="main_menu" value="มาม่าคาโบนาร่า" data-price="69" onchange="calculateTotal()"> มาม่าคาโบนาร่า <span class="price">69.-</span></label>
+            <label><input type="radio" name="main_menu" value="Original" data-price="69" onchange="calculateTotal()"> มาม่าเกาหลีห่อไข่ (Original) <span class="price">69.-</span></label>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">🍜 บลูดั๊ค (หมวด 99.-)</span>
+            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสเผ็ดสีดำ" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสเผ็ดสีดำ <span class="price">99.-</span></label>
+            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสชีส" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสชีส <span class="price">99.-</span></label>
+            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสคาโบนาร่า" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสคาโบนาร่า <span class="price">99.-</span></label>
+            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสโรเซ่" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสโรเซ่ <span class="price">99.-</span></label>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">🔥 ระดับความเผ็ด</span>
+            <label><input type="radio" name="spicy_level" value="คูณ 1"> คูณ 1</label>
+            <label><input type="radio" name="spicy_level" value="คูณ 2"> คูณ 2</label>
+            <label><input type="radio" name="spicy_level" value="คูณ 3"> คูณ 3</label>
+            <label><input type="radio" name="spicy_level" value="คูณ 4"> คูณ 4</label>
+            <label><input type="radio" name="spicy_level" value="เผ็ดนรก"> เผ็ดนรก</label>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">🍱 เมนูทานเล่น</span>
+            <label><input type="checkbox" name="extra_menu" value="นาโช่เนื้อ" data-price="79" onchange="calculateTotal()"> นาโช่เนื้อ <span class="price">79.-</span></label>
+            <label><input type="checkbox" name="extra_menu" value="นาโช่หมู" data-price="69" onchange="calculateTotal()"> นาโช่หมู <span class="price">69.-</span></label>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">✨ เครื่องเคียง (ฟรี 2 อย่าง ถัดไป +10.-)</span>
+            <div id="sides-list">
+                <label><input type="checkbox" name="sides" value="แฮม" onchange="calculateTotal()"> แฮม</label>
+                <label><input type="checkbox" name="sides" value="เบคอน" onchange="calculateTotal()"> เบคอน</label>
+                <label><input type="checkbox" name="sides" value="ไส้กรอกชีส" onchange="calculateTotal()"> ไส้กรอกชีส</label>
+                <label><input type="checkbox" name="sides" value="ยำสาหร่าย" onchange="calculateTotal()"> ยำสาหร่าย</label>
+                <label><input type="checkbox" name="sides" value="ไข่กุ้ง" onchange="calculateTotal()"> ไข่กุ้ง</label>
+                <label><input type="checkbox" name="sides" value="ปลาหมึก" onchange="calculateTotal()"> ปลาหมึก</label>
+                <label><input type="checkbox" name="sides" value="แมงกะพรุน" onchange="calculateTotal()"> แมงกะพรุน</label>
+                <label><input type="checkbox" name="sides" value="หมูสับ" onchange="calculateTotal()"> หมูสับ</label>
+                <label><input type="checkbox" name="sides" value="เห็ด" onchange="calculateTotal()"> เห็ด</label>
+                <label><input type="checkbox" name="sides" value="ปูอัด" onchange="calculateTotal()"> ปูอัด</label>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">🧀 เพิ่มเติม</span>
+            <label><input type="checkbox" name="extra" value="เพิ่มชีสซอส" data-price="15" onchange="calculateTotal()"> เพิ่มชีสซอส <span class="price">+15.-</span></label>
+            <label><input type="checkbox" name="extra" value="เพิ่มชีสแผ่น" data-price="20" onchange="calculateTotal()"> เพิ่มชีสแผ่น <span class="price">+20.-</span></label>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">📍 ชื่อลูกค้า</span>
+            <input type="text" name="customer" class="input-text" placeholder="ระบุชื่อของคุณ" required>
+        </div>
+
+        <div class="menu-item">
+            <span class="section-title">📝 รายละเอียดอื่นๆ</span>
+            <input type="text" name="note" class="input-text" placeholder="เช่น ไม่ผัก / ถ้าของหมดเอาอะไรแทน">
+        </div>
+
+        <div class="total-box">
+            รวมเงินทั้งหมด <span id="total_display">0</span> บาท
+        </div>
+
+        <button type="submit" id="submitBtn">ยืนยันการสั่งอาหาร</button>
+    </form>
+</div>
+
+<div id="paymentModal">
+    <div class="modal-content">
+        <div class="summary-header">✅ ส่งออเดอร์เรียบร้อย!</div>
+        <div class="summary-detail">
+            <b id="modal_queue" style="font-size: 1.2em;"></b><br>
+            ยอดชำระทั้งหมด: <span id="modal_total" style="color: #d32f2f; font-weight: bold;"></span> บาท
+        </div>
+        
+        <p style="font-size: 0.9em; margin-bottom: 5px;">📸 <b>แคปหน้าจอนี้ไว้สแกนจ่ายได้เลย</b></p>
+        
+        <img src="qr-payment.jpg" class="qr-image" alt="QR Code Payment">
+        
+        <p style="font-size: 0.85em; color: #666;">ชื่อบัญชี: บารมี ใจชอบ</p>
+        <button onclick="closeModal()" class="close-btn">สั่งเพิ่ม / ปิดหน้าต่าง</button>
+    </div>
+</div>
+
+<script>
+    const TELEGRAM_TOKEN = '7795027949:AAGsiPU4FFfoZuXKoDXLqgXlEqmBeEKwnuA';
+    const CHAT_ID = '7006062970'; 
+    const GROUP_CHAT_ID = '-1003862093556'; 
+
+    function calculateTotal() {
+        let total = 0;
+        const main = document.querySelector('input[name="main_menu"]:checked');
+        if (main) total += parseInt(main.getAttribute('data-price'));
+
+        const sides = document.querySelectorAll('input[name="sides"]:checked');
+        if (sides.length > 2) {
+            total += (sides.length - 2) * 10;
+        }
+
+        const extras = document.querySelectorAll('input[name="extra"]:checked');
+        extras.forEach(item => {
+            total += parseInt(item.getAttribute('data-price'));
+        });
+
+        const extraMenus = document.querySelectorAll('input[name="extra_menu"]:checked');
+        extraMenus.forEach(item => {
+            total += parseInt(item.getAttribute('data-price'));
+        });
+
+        document.getElementById('total_display').innerText = total;
+        return total;
+    }
+
+    function showPaymentSummary(queue, total) {
+        document.getElementById('modal_queue').innerText = "คิวที่: " + queue;
+        document.getElementById('modal_total').innerText = total;
+        document.getElementById('paymentModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('paymentModal').style.display = 'none';
+        document.getElementById('orderForm').reset();
+        calculateTotal();
+    }
+
+    document.getElementById('orderForm').onsubmit = function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const finalPrice = calculateTotal();
+        
+        let currentQueue = parseInt(localStorage.getItem('last_queue_number')) || 0;
+        currentQueue++;
+        localStorage.setItem('last_queue_number', currentQueue);
+
+        btn.disabled = true;
+        btn.innerText = "กำลังส่งออเดอร์...";
+
+        const formData = new FormData(this);
+        let hasCheeseSlice = false;
+        
+        let msg = `🎫 *คิวที่: ${currentQueue}* 🎫\n`;
+        msg += `-------------------------\n`;
+        msg += `👤 ลูกค้า: ${formData.get('customer')}\n`;
+        
+        const main = formData.get('main_menu');
+        if(main) msg += `🍜 เมนู: ${main}\n`;
+        
+        const spicy = formData.get('spicy_level');
+        if(spicy) msg += `🌶 ความเผ็ด: ${spicy}\n`;
+        
+        let s = []; formData.getAll('sides').forEach(v => s.push(v));
+        if(s.length > 0) msg += `🥗 เครื่องเคียง: ${s.join(', ')}\n`;
+        
+        let ex = []; 
+        formData.getAll('extra').forEach(v => {
+            ex.push(v);
+            if(v === "เพิ่มชีสแผ่น") hasCheeseSlice = true;
+        });
+        if(ex.length > 0) msg += `🧀 เพิ่มเติม: ${ex.join(', ')}\n`;
+        
+        let exMenu = []; formData.getAll('extra_menu').forEach(v => exMenu.push(v));
+        if(exMenu.length > 0) msg += `🍱 เมนูทานเล่น: ${exMenu.join(', ')}\n`;
+        
+        if (hasCheeseSlice) {
+            msg += `\n🚨🚨🚨🚨🚨🚨🚨🚨🚨\n`;
+            msg += `🔴 **!!! เพิ่มชีสแผ่น !!!** 🔴\n`;
+            msg += `🚨🚨🚨🚨🚨🚨🚨🚨🚨\n\n`;
+        }
+
+        msg += `📝 รายละเอียด: ${formData.get('note') || '-'}\n`;
+        msg += `💰 *รวมยอด: ${finalPrice} บาท*\n`;
+        msg += `⏰ เวลา: ${new Date().toLocaleTimeString('th-TH')}`;
+
+        const sendToTelegram = (chatId) => {
+            return fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'Markdown' })
+            });
+        };
+
+        Promise.all([
+            sendToTelegram(CHAT_ID),
+            sendToTelegram(GROUP_CHAT_ID)
+        ])
+        .then(() => {
+            showPaymentSummary(currentQueue, finalPrice);
+        })
+        .catch(() => alert("เกิดข้อผิดพลาดในการส่งข้อมูล"))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "ยืนยันการสั่งอาหาร";
+        });
+    };
+</script>
+</body>
+</html>
