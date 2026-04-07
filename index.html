@@ -5,265 +5,383 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KOREAN MAMA WRAP - Order System</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #fdfaf5; color: #333; margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 2px solid #a52a2a; }
-        h2 { text-align: center; color: #a52a2a; margin: 0; text-transform: uppercase; }
+        h2 { text-align: center; color: #a52a2a; margin: 0; text-transform: uppercase; cursor: pointer; user-select: none; -webkit-user-select: none; }
         .menu-item { border-bottom: 1px solid #eee; padding: 12px 0; }
         .price { color: #d32f2f; font-weight: bold; float: right; }
         .section-title { font-weight: bold; margin-top: 10px; display: block; color: #5d4037; font-size: 1.1em; }
+        .description { font-size: 0.85em; color: #5d4037; display: block; margin-top: 5px; line-height: 1.5; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 5px; }
         label { display: block; margin: 12px 0; cursor: pointer; transition: 0.2s; }
         input[type="radio"], input[type="checkbox"] { margin-right: 12px; transform: scale(1.3); accent-color: #d32f2f; }
         .input-text { width: 100%; padding: 12px; margin-top: 5px; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .stepper-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 5px; background: #f9f9f9; border-radius: 8px; }
+        .stepper-controls { display: flex; align-items: center; gap: 8px; }
+        .btn-qty { background: #d32f2f; color: white; border: none; width: 25px; height: 25px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .qty-val { min-width: 20px; text-align: center; font-weight: bold; }
         .total-box { background: #fff3e0; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center; border: 1px solid #ffcc80; }
         #total_display { font-size: 1.5em; color: #d32f2f; font-weight: bold; }
         button { width: 100%; background-color: #d32f2f; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 4px #8b0000; }
         button:disabled { background-color: #ccc; box-shadow: none; }
-
-        /* Modal สำหรับสรุปยอดและ QR Code */
-        #paymentModal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 25px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-        }
-        .qr-image { 
-            width: 100%; 
-            max-width: 280px; 
-            margin: 15px auto; 
-            border: 2px solid #eee; 
-            border-radius: 15px; 
-            display: block;
-        }
-        .summary-header { color: #2e7d32; font-size: 1.5em; font-weight: 600; margin-bottom: 10px; }
-        .summary-detail { font-size: 1.1em; line-height: 1.6; margin-bottom: 15px; }
-        .close-btn { 
-            background: #444; 
-            margin-top: 15px; 
-            padding: 12px; 
-            font-size: 1em;
-            box-shadow: 0 4px #222;
-        }
+        .special-box { background-color: #fffde7; padding: 15px; border-radius: 15px; border: 2px dashed #fbc02d; margin-bottom: 10px; }
+        .sub-menu { margin-left: 10px; padding: 10px; background: #fff; border-radius: 10px; border: 1px solid #eee; margin-top: 10px; }
+        #paymentModal, #adminInventoryModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content, .inventory-content { background: white; padding: 25px; border-radius: 25px; max-width: 500px; width: 100%; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .admin-section { text-align: left; margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 10px; }
+        .admin-item-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+        .admin-input { padding: 5px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-del { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .btn-add { background: #2e7d32; color: white; border: none; padding: 8px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
+        .status-toggle { cursor: pointer; padding: 5px 8px; border-radius: 5px; font-size: 0.8em; border: 1px solid #ddd; }
+        .status-on { background: #e8f5e9; color: #2e7d32; }
+        .status-off { background: #ffebee; color: #d32f2f; text-decoration: line-through; }
+        .qr-image { width: 100%; max-width: 280px; margin: 15px auto; border: 2px solid #eee; border-radius: 15px; display: block; }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #a52a2a; }
+        .btn-contact { background-color: #1877f2; box-shadow: 0 4px #0d47a1; margin-top: 10px; font-size: 1em; padding: 12px; }
+        .btn-seed { background-color: #ff9800; color: white; border: none; padding: 10px; border-radius: 10px; margin-bottom: 10px; width: 100%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
+<div id="loader">กรุณารอสักครู่ กำลังเตรียมเมนู...</div>
+
 <div class="container">
-    <h2>KOREAN MAMA WRAP</h2>
-    <p style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ โดย <b>cittamama bot</b></p>
+    <h2 id="adminTrigger">KOREAN MAMA WRAP</h2>
+    <p id="subtitle" style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ โดย <b>cittamama bot</b></p>
+
+    <div id="closed_overlay" style="display:none; text-align:center; padding: 40px 10px; background: #fffde7; border-radius: 15px; border: 2px dashed #d32f2f; margin-top: 20px;">
+        <h1 style="color: #d32f2f; font-size: 3em; margin: 0;">🔴</h1>
+        <h2 style="color: #d32f2f; margin-top: 10px;">วันนี้ปิดร้าน</h2>
+        <p style="font-size: 1.2em; color: #5d4037; margin-top: 20px; line-height: 1.6;">ขอบคุณลูกค้าที่อุดหนุน<br>เจอกันวันที่ <b id="closed_date_display"></b></p>
+    </div>
 
     <form id="orderForm">
-        <div class="menu-item">
-            <span class="section-title">🍜 เลือกเมนูหลัก (หมวด 69.-)</span>
-            <label><input type="radio" name="main_menu" value="มาม่าไข่เค็ม" data-price="69" onchange="calculateTotal()"> มาม่าไข่เค็ม <span class="price">69.-</span></label>
-            <label><input type="radio" name="main_menu" value="มาม่าจีนสีดำ" data-price="69" onchange="calculateTotal()"> มาม่าจีนสีดำ <span class="price">69.-</span></label>
-            <label><input type="radio" name="main_menu" value="มาม่าจีนสีชมพู" data-price="69" onchange="calculateTotal()"> มาม่าจีนสีชมพู <span class="price">69.-</span></label>
-            <label><input type="radio" name="main_menu" value="มาม่าคาโบนาร่า" data-price="69" onchange="calculateTotal()"> มาม่าคาโบนาร่า <span class="price">69.-</span></label>
-            <label><input type="radio" name="main_menu" value="Original" data-price="69" onchange="calculateTotal()"> มาม่าเกาหลีห่อไข่ (Original) <span class="price">69.-</span></label>
-        </div>
-
-        <div class="menu-item">
-            <span class="section-title">🍜 บลูดั๊ค (หมวด 99.-)</span>
-            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสเผ็ดสีดำ" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสเผ็ดสีดำ <span class="price">99.-</span></label>
-            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสชีส" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสชีส <span class="price">99.-</span></label>
-            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสคาโบนาร่า" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสคาโบนาร่า <span class="price">99.-</span></label>
-            <label><input type="radio" name="main_menu" value="บลูดั๊ค รสโรเซ่" data-price="99" onchange="calculateTotal()"> บลูดั๊ค รสโรเซ่ <span class="price">99.-</span></label>
-        </div>
-
-        <div class="menu-item">
-            <span class="section-title">🔥 ระดับความเผ็ด</span>
-            <label><input type="radio" name="spicy_level" value="คูณ 1"> คูณ 1</label>
-            <label><input type="radio" name="spicy_level" value="คูณ 2"> คูณ 2</label>
-            <label><input type="radio" name="spicy_level" value="คูณ 3"> คูณ 3</label>
-            <label><input type="radio" name="spicy_level" value="คูณ 4"> คูณ 4</label>
-            <label><input type="radio" name="spicy_level" value="เผ็ดนรก"> เผ็ดนรก</label>
-        </div>
-
-        <div class="menu-item">
-            <span class="section-title">🍱 เมนูทานเล่น</span>
-            <label><input type="checkbox" name="extra_menu" value="นาโช่เนื้อ" data-price="79" onchange="calculateTotal()"> นาโช่เนื้อ <span class="price">79.-</span></label>
-            <label><input type="checkbox" name="extra_menu" value="นาโช่หมู" data-price="69" onchange="calculateTotal()"> นาโช่หมู <span class="price">69.-</span></label>
-        </div>
-
-        <div class="menu-item">
-            <span class="section-title">✨ เครื่องเคียง (ฟรี 2 อย่าง ถัดไป +10.-)</span>
-            <div id="sides-list">
-                <label><input type="checkbox" name="sides" value="แฮม" onchange="calculateTotal()"> แฮม</label>
-                <label><input type="checkbox" name="sides" value="เบคอน" onchange="calculateTotal()"> เบคอน</label>
-                <label><input type="checkbox" name="sides" value="ไส้กรอกชีส" onchange="calculateTotal()"> ไส้กรอกชีส</label>
-                <label><input type="checkbox" name="sides" value="ยำสาหร่าย" onchange="calculateTotal()"> ยำสาหร่าย</label>
-                <label><input type="checkbox" name="sides" value="ไข่กุ้ง" onchange="calculateTotal()"> ไข่กุ้ง</label>
-                <label><input type="checkbox" name="sides" value="ปลาหมึก" onchange="calculateTotal()"> ปลาหมึก</label>
-                <label><input type="checkbox" name="sides" value="แมงกะพรุน" onchange="calculateTotal()"> แมงกะพรุน</label>
-                <label><input type="checkbox" name="sides" value="หมูสับ" onchange="calculateTotal()"> หมูสับ</label>
-                <label><input type="checkbox" name="sides" value="เห็ด" onchange="calculateTotal()"> เห็ด</label>
-                <label><input type="checkbox" name="sides" value="ปูอัด" onchange="calculateTotal()"> ปูอัด</label>
+        <div class="menu-item" id="section_signature">
+            <span class="section-title">🌟 เมนูพิเศษ (Signature)</span>
+            <div class="special-box">
+                <label>
+                    <input type="radio" name="main_menu" value="มาม่าดอกไม้" data-price="169" onchange="toggleSpecialMenu(true)"> 
+                    <b style="font-size: 1.2em; color: #d32f2f;">🌸 มาม่าดอกไม้</b> <span class="price">169.-</span>
+                    <span class="description">✨ สูตรลับเฉพาะ: มาม่าบลูดั๊ก+ซอสพิเศษ+ชีสแผ่น 3 แผ่น+ไข่แดง+ไก่ทอดเกาหลี!</span>
+                </label>
+                <div id="flower_flavor_container" class="sub-menu" style="display: none;">
+                    <span class="section-title">1. เลือกรสชาติ:</span>
+                    <div id="render_flower_flavors"></div>
+                    <span class="section-title">2. เครื่องเคียง (ฟรี 3 อย่าง):</span>
+                    <div id="render_flower_sides"></div>
+                    <label><input type="checkbox" name="request_candle" value="รับเทียนวันเกิด"> 🎂 รับเทียนวันเกิดฟรี!</label>
+                </div>
             </div>
         </div>
 
+        <div class="menu-item"><span class="section-title">🍜 เมนูหลัก (มาม่า OK)</span><div id="render_main_ok"></div></div>
+        <div class="menu-item"><span class="section-title">✨ เมนูพรีเมี่ยม (บลูดั๊ค)</span><div id="render_main_buldak"></div></div>
+        <div class="menu-item"><span class="section-title">🍜 เมนูหลัก (มาม่าธรรมดา)</span><div id="render_main_mama"></div></div>
+        <div class="menu-item"><span class="section-title">🍜 เมนูหลัก (ไวไว)</span><div id="render_main_waiwai"></div></div>
+        <div class="menu-item"><span class="section-title">🍜 เมนูหลัก (ยำยำ)</span><div id="render_main_yumyum"></div></div>
+        
         <div class="menu-item">
-            <span class="section-title">🧀 เพิ่มเติม</span>
-            <label><input type="checkbox" name="extra" value="เพิ่มชีสซอส" data-price="15" onchange="calculateTotal()"> เพิ่มชีสซอส <span class="price">+15.-</span></label>
-            <label><input type="checkbox" name="extra" value="เพิ่มชีสแผ่น" data-price="20" onchange="calculateTotal()"> เพิ่มชีสแผ่น <span class="price">+20.-</span></label>
+            <span class="section-title">🔥 ระดับความเผ็ด</span>
+            <label><input type="radio" name="spicy_level" value="คูณ 1" checked> คูณ 1</label>
+            <label><input type="radio" name="spicy_level" value="คูณ 2"> คูณ 2</label>
+            <label><input type="radio" name="spicy_level" value="คูณ 3"> คูณ 3</label>
+            <label><input type="radio" name="spicy_level" value="เผ็ดนรก"> เผ็ดนรก</label>
+        </div>
+
+        <div class="menu-item"><span class="section-title">🍱 เมนูทานเล่น</span><div id="render_snacks"></div></div>
+        <div class="menu-item" id="normal-sides-container"><span class="section-title">✨ เครื่องเคียง (ฟรี 2 อย่าง)</span><div id="render_normal_sides"></div></div>
+        <div class="menu-item"><span class="section-title">🧀 เพิ่มเติม</span><div id="render_extras"></div></div>
+
+        <div class="menu-item">
+            <span class="section-title">🛵 วิธีการรับสินค้า</span>
+            <select name="delivery_type" id="delivery_type" class="input-text" onchange="handleDeliveryChange(this.value)">
+                <option value="รับเองที่ร้าน">รับเองที่ร้าน</option>
+                <option value="จัดส่ง (Delivery)">จัดส่ง (Delivery)</option>
+            </select>
         </div>
 
         <div class="menu-item">
-            <span class="section-title">📍 ชื่อลูกค้า</span>
-            <input type="text" name="customer" class="input-text" placeholder="ระบุชื่อของคุณ" required>
+            <span class="section-title">📍 ข้อมูลลูกค้า</span>
+            <input type="text" name="customer" id="customer_name" class="input-text" placeholder="ชื่อของคุณ" required>
+            <input type="tel" name="phone" id="phone_input" class="input-text" placeholder="เบอร์โทรศัพท์">
+            <div id="address_section" style="display:none;">
+                <input type="text" name="address" id="address_input" class="input-text" placeholder="พิกัด/ที่อยู่">
+            </div>
+            <input type="text" name="note" class="input-text" placeholder="โน้ตเพิ่มเติม">
         </div>
 
-        <div class="menu-item">
-            <span class="section-title">📝 รายละเอียดอื่นๆ</span>
-            <input type="text" name="note" class="input-text" placeholder="เช่น ไม่ผัก / ถ้าของหมดเอาอะไรแทน">
-        </div>
-
-        <div class="total-box">
-            รวมเงินทั้งหมด <span id="total_display">0</span> บาท
-        </div>
-
+        <div class="total-box">รวมเงินทั้งหมด <span id="total_display">0</span> บาท</div>
         <button type="submit" id="submitBtn">ยืนยันการสั่งอาหาร</button>
+        <button type="button" class="btn-contact" onclick="window.location.href='https://www.facebook.com/share/1ZeDBC4aAM/'">💬 ติดต่อสอบถาม/แจ้งปัญหา (Facebook)</button>
     </form>
 </div>
 
-<div id="paymentModal">
-    <div class="modal-content">
-        <div class="summary-header">✅ ส่งออเดอร์เรียบร้อย!</div>
-        <div class="summary-detail">
-            <b id="modal_queue" style="font-size: 1.2em;"></b><br>
-            ยอดชำระทั้งหมด: <span id="modal_total" style="color: #d32f2f; font-weight: bold;"></span> บาท
-        </div>
-        
-        <p style="font-size: 0.9em; margin-bottom: 5px;">📸 <b>แคปหน้าจอนี้ไว้สแกนจ่ายได้เลย</b></p>
-        
-        <img src="qr-payment.jpg" class="qr-image" alt="QR Code Payment">
-        
-        <p style="font-size: 0.85em; color: #666;">ชื่อบัญชี: บารมี ใจชอบ</p>
-        <button onclick="closeModal()" class="close-btn">สั่งเพิ่ม / ปิดหน้าต่าง</button>
-    </div>
-</div>
+<div id="adminInventoryModal"><div class="inventory-content"><h2 id="adminModalTitle" style="color:#a52a2a;">🛠️ จัดการเมนู & สต็อก</h2><div id="admin_manager_area"></div><button onclick="saveAndCloseAdmin()" class="btn-add" style="background:#444;">บันทึกและปิดหน้าต่าง</button></div></div>
+<div id="paymentModal"><div class="modal-content"><h2 style="color:#2e7d32;">✅ ส่งออเดอร์แล้ว!</h2><div id="modal_total" style="color:#d32f2f; font-weight:bold; font-size:1.2em; margin:15px 0;"></div><img src="qr-payment.jpg" class="qr-image" alt="QR Payment"><button onclick="closeModal()" style="background:#666; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">กลับไปหน้าหลัก</button></div></div>
 
 <script>
+    const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const TELEGRAM_TOKEN = '7795027949:AAGsiPU4FFfoZuXKoDXLqgXlEqmBeEKwnuA';
     const CHAT_ID = '7006062970'; 
-    const GROUP_CHAT_ID = '-1003862093556'; 
+    const GROUP_CHAT_ID = '-1003862093556';
+
+    let menuDB = { system_config:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
+    let currentAdminMode = 'menu';
+
+    async function loadMenu() {
+        try {
+            const { data, error } = await _supabase.from('menu_items').select('*').order('name');
+            if (data && data.length > 0) {
+                const freshDB = { system_config:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
+                data.forEach(item => { if(freshDB[item.category]) freshDB[item.category].push(item); });
+                menuDB = freshDB;
+            }
+
+            let isShopClosed = false;
+            let reopenDateStr = "";
+            
+            if (menuDB.system_config && menuDB.system_config.length > 0) {
+                let config = menuDB.system_config[0];
+                if (config.stock === false && config.name) {
+                    let reopenDate = new Date(config.name + "T23:59:59");
+                    if (new Date() > reopenDate) {
+                        isShopClosed = false; 
+                    } else {
+                        isShopClosed = true;
+                        let parts = config.name.split('-');
+                        if(parts.length === 3) reopenDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        else reopenDateStr = config.name;
+                    }
+                }
+            }
+
+            if (isShopClosed) {
+                document.getElementById('orderForm').style.display = 'none';
+                document.getElementById('subtitle').style.display = 'none';
+                document.getElementById('closed_overlay').style.display = 'block';
+                document.getElementById('closed_date_display').innerText = reopenDateStr;
+            } else {
+                renderUI();
+            }
+            document.getElementById('loader').style.display = 'none';
+        } catch (e) { console.error(e); }
+    }
+
+    function renderUI() {
+        renderSection('render_main_ok', menuDB.main_ok, 'radio', 'main_menu');
+        renderSection('render_main_buldak', menuDB.main_buldak, 'radio', 'main_menu');
+        renderSection('render_main_mama', menuDB.main_mama, 'radio', 'main_menu');
+        renderSection('render_main_waiwai', menuDB.main_waiwai, 'radio', 'main_menu');
+        renderSection('render_main_yumyum', menuDB.main_yumyum, 'radio', 'main_menu');
+        renderSection('render_flower_flavors', menuDB.flower_flavors, 'radio', 'flower_flavor');
+        renderStepperSection('render_flower_sides', menuDB.sides, 'flower_sides');
+        renderStepperSection('render_normal_sides', menuDB.sides, 'normal_sides');
+        renderSection('render_snacks', menuDB.snacks, 'checkbox', 'extra_menu');
+        renderSection('render_extras', menuDB.extras, 'checkbox', 'extra');
+        calculateTotal();
+    }
+
+    function renderSection(id, data, type, name) {
+        const div = document.getElementById(id); div.innerHTML = '';
+        data.forEach(item => {
+            if (!item.stock) return;
+            const lbl = document.createElement('label');
+            const onChg = (name === 'main_menu') ? 'onchange="toggleSpecialMenu(this.value === \'มาม่าดอกไม้\')"' : 'onchange="calculateTotal()"';
+            lbl.innerHTML = `<input type="${type}" name="${name}" value="${item.name}" data-price="${item.price}" ${onChg}> ${item.name} <span class="price">${item.price||0}.-</span>`;
+            div.appendChild(lbl);
+        });
+    }
+
+    function renderStepperSection(id, data, prefix) {
+        const div = document.getElementById(id); div.innerHTML = '';
+        data.forEach((item, i) => {
+            if (!item.stock) return;
+            const row = document.createElement('div'); row.className = 'stepper-item';
+            row.innerHTML = `<span>${item.name}</span><div class="stepper-controls"><button type="button" class="btn-qty" onclick="updateQty('${prefix}',${i},-1)">-</button><span class="qty-val" id="${prefix}_qty_${i}">0</span><button type="button" class="btn-qty" onclick="updateQty('${prefix}',${i},1)">+</button></div>`;
+            div.appendChild(row);
+        });
+    }
+
+    function updateQty(p, i, d) {
+        const el = document.getElementById(`${p}_qty_${i}`);
+        if (!el) return;
+        let current = parseInt(el.innerText);
+        el.innerText = Math.max(0, current + d);
+        calculateTotal();
+    }
+
+    function toggleSpecialMenu(isFlower) {
+        document.getElementById('flower_flavor_container').style.display = isFlower ? 'block' : 'none';
+        document.getElementById('normal-sides-container').style.display = isFlower ? 'none' : 'block';
+        document.querySelectorAll('.qty-val').forEach(el => el.innerText = "0");
+        calculateTotal();
+    }
 
     function calculateTotal() {
         let total = 0;
         const main = document.querySelector('input[name="main_menu"]:checked');
-        if (main) total += parseInt(main.getAttribute('data-price'));
-
-        const sides = document.querySelectorAll('input[name="sides"]:checked');
-        if (sides.length > 2) {
-            total += (sides.length - 2) * 10;
+        if (main) {
+            total += parseInt(main.getAttribute('data-price')) || 0;
+            const isFlower = (main.value === "มาม่าดอกไม้");
+            const prefix = isFlower ? "flower_sides" : "normal_sides";
+            const freeLimit = isFlower ? 3 : 2;
+            let sidesCount = 0;
+            menuDB.sides.forEach((_, i) => { 
+                const el = document.getElementById(`${prefix}_qty_${i}`); 
+                if(el) sidesCount += parseInt(el.innerText); 
+            });
+            if (sidesCount > freeLimit) total += (sidesCount - freeLimit) * 10;
+        } else {
+            let sidesCount = 0;
+            menuDB.sides.forEach((_, i) => { 
+                const el = document.getElementById(`normal_sides_qty_${i}`); 
+                if(el) sidesCount += parseInt(el.innerText); 
+            });
+            total += sidesCount * 10;
         }
-
-        const extras = document.querySelectorAll('input[name="extra"]:checked');
-        extras.forEach(item => {
-            total += parseInt(item.getAttribute('data-price'));
+        document.querySelectorAll('input[name="extra"]:checked, input[name="extra_menu"]:checked').forEach(el => {
+            total += parseInt(el.getAttribute('data-price')) || 0;
         });
-
-        const extraMenus = document.querySelectorAll('input[name="extra_menu"]:checked');
-        extraMenus.forEach(item => {
-            total += parseInt(item.getAttribute('data-price'));
-        });
-
         document.getElementById('total_display').innerText = total;
         return total;
     }
 
-    function showPaymentSummary(queue, total) {
-        document.getElementById('modal_queue').innerText = "คิวที่: " + queue;
-        document.getElementById('modal_total').innerText = total;
-        document.getElementById('paymentModal').style.display = 'flex';
+    function handleDeliveryChange(v) { 
+        document.getElementById('address_section').style.display = (v.includes('จัดส่ง')) ? 'block' : 'none'; 
     }
 
-    function closeModal() {
-        document.getElementById('paymentModal').style.display = 'none';
-        document.getElementById('orderForm').reset();
-        calculateTotal();
-    }
-
-    document.getElementById('orderForm').onsubmit = function(e) {
+    document.getElementById('orderForm').onsubmit = async function(e) {
         e.preventDefault();
+        const price = calculateTotal();
+        const fd = new FormData(this);
         const btn = document.getElementById('submitBtn');
-        const finalPrice = calculateTotal();
-        
-        let currentQueue = parseInt(localStorage.getItem('last_queue_number')) || 0;
-        currentQueue++;
-        localStorage.setItem('last_queue_number', currentQueue);
-
-        btn.disabled = true;
-        btn.innerText = "กำลังส่งออเดอร์...";
-
-        const formData = new FormData(this);
-        let hasCheeseSlice = false;
-        
-        let msg = `🎫 *คิวที่: ${currentQueue}* 🎫\n`;
-        msg += `-------------------------\n`;
-        msg += `👤 ลูกค้า: ${formData.get('customer')}\n`;
-        
-        const main = formData.get('main_menu');
-        if(main) msg += `🍜 เมนู: ${main}\n`;
-        
-        const spicy = formData.get('spicy_level');
-        if(spicy) msg += `🌶 ความเผ็ด: ${spicy}\n`;
-        
-        let s = []; formData.getAll('sides').forEach(v => s.push(v));
-        if(s.length > 0) msg += `🥗 เครื่องเคียง: ${s.join(', ')}\n`;
-        
-        let ex = []; 
-        formData.getAll('extra').forEach(v => {
-            ex.push(v);
-            if(v === "เพิ่มชีสแผ่น") hasCheeseSlice = true;
+        if (!fd.get('main_menu') && price === 0) { alert('กรุณาเลือกเมนูอาหาร'); return; }
+        btn.disabled = true; btn.innerText = "กำลังส่ง...";
+        let orderDetails = `🍜 เมนูหลัก: ${fd.get('main_menu') || 'ไม่ได้เลือก'}`;
+        if(fd.get('flower_flavor')) orderDetails += `\n🍲 รสชาติ: ${fd.get('flower_flavor')}`;
+        let hasCheese = (fd.get('main_menu') === 'มาม่าดอกไม้');
+        if(fd.get('main_menu') === 'มาม่าดอกไม้') orderDetails += `\n🧀 พิเศษ: ชีสแผ่น 3 แผ่น + ไข่แดง + ไก่ทอดเกาหลี`;
+        let sidesMsg = "";
+        const prefix = (fd.get('main_menu') === 'มาม่าดอกไม้') ? 'flower_sides' : 'normal_sides';
+        menuDB.sides.forEach((s, i) => {
+            const qty = document.getElementById(`${prefix}_qty_${i}`)?.innerText || "0";
+            if(parseInt(qty) > 0) sidesMsg += `\n - ${s.name} (${qty})`;
         });
-        if(ex.length > 0) msg += `🧀 เพิ่มเติม: ${ex.join(', ')}\n`;
-        
-        let exMenu = []; formData.getAll('extra_menu').forEach(v => exMenu.push(v));
-        if(exMenu.length > 0) msg += `🍱 เมนูทานเล่น: ${exMenu.join(', ')}\n`;
-        
-        if (hasCheeseSlice) {
-            msg += `\n🚨🚨🚨🚨🚨🚨🚨🚨🚨\n`;
-            msg += `🔴 **!!! เพิ่มชีสแผ่น !!!** 🔴\n`;
-            msg += `🚨🚨🚨🚨🚨🚨🚨🚨🚨\n\n`;
-        }
-
-        msg += `📝 รายละเอียด: ${formData.get('note') || '-'}\n`;
-        msg += `💰 *รวมยอด: ${finalPrice} บาท*\n`;
-        msg += `⏰ เวลา: ${new Date().toLocaleTimeString('th-TH')}`;
-
-        const sendToTelegram = (chatId) => {
-            return fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'Markdown' })
-            });
-        };
-
-        Promise.all([
-            sendToTelegram(CHAT_ID),
-            sendToTelegram(GROUP_CHAT_ID)
-        ])
-        .then(() => {
-            showPaymentSummary(currentQueue, finalPrice);
-        })
-        .catch(() => alert("เกิดข้อผิดพลาดในการส่งข้อมูล"))
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerText = "ยืนยันการสั่งอาหาร";
+        if(sidesMsg) orderDetails += `\n✨ เครื่องเคียง:${sidesMsg}`;
+        let extrasMsg = "";
+        fd.getAll('extra_menu').forEach(ex => { extrasMsg += `\n - ${ex}`; if(ex.includes("ชีสแผ่น")) hasCheese = true; });
+        fd.getAll('extra').forEach(ex => { extrasMsg += `\n - ${ex}`; if(ex.includes("ชีสแผ่น")) hasCheese = true; });
+        if(extrasMsg) orderDetails += `\n🍱 เพิ่มเติม:${extrasMsg}`;
+        let cheeseWarning = hasCheese ? `\n\n🚨🚨🚨🚨🚨🚨🚨🚨🚨\n🔴 !!! มีชีสแผ่น !!! 🔴\n🚨🚨🚨🚨🚨🚨🚨🚨🚨` : "";
+        let msg = `👤 ลูกค้า: ${fd.get('customer')}\n📱 โทร: ${fd.get('phone') || '-'}\n💰 ยอดรวม: ${price} บาท\n📍 วิธีรับ: ${fd.get('delivery_type')}\n🏠 ที่อยู่: ${fd.get('address') || '-'}\n🌶️ เผ็ด: ${fd.get('spicy_level')}\n${orderDetails}${cheeseWarning}\n📝 โน้ต: ${fd.get('note') || '-'}`;
+        const send = (id) => fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ chat_id: id, text: msg })
         });
+        try {
+            await Promise.all([send(CHAT_ID), send(GROUP_CHAT_ID)]);
+            document.getElementById('modal_total').innerText = "ยอดชำระ: " + price + " บาท";
+            document.getElementById('paymentModal').style.display = 'flex';
+        } catch (err) { alert('เกิดข้อผิดพลาดในการส่งข้อมูล'); } finally { btn.disabled = false; btn.innerText = "ยืนยันการสั่งอาหาร"; }
     };
+
+    let pressTimer;
+    document.getElementById('adminTrigger').onmousedown = document.getElementById('adminTrigger').ontouchstart = () => {
+        pressTimer = setTimeout(() => { if(prompt("รหัสผ่าน:") === "0420") { currentAdminMode = 'menu'; openAdmin(); } }, 2000);
+    };
+    document.getElementById('adminTrigger').onmouseup = document.getElementById('adminTrigger').ontouchend = () => clearTimeout(pressTimer);
+
+    function seedStoreData() {
+        if(!confirm("ต้องการดึงรายการวัตถุดิบเริ่มต้นทั้งหมดใช่หรือไม่? (ข้อมูลเดิมในหน้า Store จะถูกแทนที่)")) return;
+        const seed = [
+            {n:"มาม่าOK ฮ็อตโคเรียน", s:true}, {n:"มาม่าOK ไข่เค็ม", s:true}, {n:"มาม่าOK คาโบน่าร่า", s:true}, {n:"มาม่าOK พะแนง", s:false}, {n:"มาม่าOK ต้มยำกุ้งน้ำข้น", s:true}, {n:"มาม่าOK หม่าล่าเนื้อ", s:true}, {n:"มาม่าOK ฮ็อตสไปซี่", s:false}, {n:"มาม่าOK กุ้งผัดต้มยำ", s:true},
+            {n:"Buldak Original", s:true}, {n:"Buldak เผ็ดx2", s:true}, {n:"Buldak Hot chicken", s:true}, {n:"Buldak ชีส", s:true}, {n:"Buldak คาโบนาร่า", s:true}, {n:"Buldak Rose", s:false}, {n:"Buldak หม่าล่า", s:false},
+            {n:"มาม่า ต้มยำกุ้ง", s:true}, {n:"มาม่า ต้มยำน้ำข้น", s:true}, {n:"มาม่า หมูสับ", s:true}, {n:"มาม่า แกงเขียวหวาน", s:true},
+            {n:"ควิก ต้มโคล้ง", s:true}, {n:"ไวไว หมูมะนาว", s:true}, {n:"ไวไว หอยลายผัดฉ่า", s:true},
+            {n:"ยำยำ ผัดฉ่าทะเล", s:true}, {n:"ยำยำ สไปซี่ทริปเปิ้ลชีส", s:true}, {n:"ยำยำ สไปซี่ล็อบเตอร์", s:true},
+            {n:"ไข่ไก่", s:true}, {n:"ไส้กรอกชีส", s:true}, {n:"ปูอัด", s:true}, {n:"เบค่อน", s:true}, {n:"หมูสับ", s:true}, {n:"เนื้อ", s:true}, {n:"ไข่กุ้ง", s:true}, {n:"แมงกะพรุน", s:true}, {n:"หมึก", s:true}, {n:"เห็ด", s:true}, {n:"ชีสแผ่น", s:true}, {n:"ยำสาหร่าย", s:true}, {n:"สาหร่ายวากาเมะ", s:true}, {n:"ไก่ทอด", s:false}, {n:"สาหร่ายผงโรย", s:true}, {n:"ผักกาดขาว", s:true}, {n:"หัวหอม", s:true}, {n:"มะเขือเทศ", s:true}, {n:"นมข้นจืด", s:false}, {n:"ข้าว", s:false}, {n:"โดริโทส", s:false},
+            {n:"ซอสเผ็ด", s:false}, {n:"ซอสชีส", s:false}, {n:"ซอสซาวครีม", s:true}, {n:"ซอสเทอริยากิ", s:false}, {n:"พริกผงเกาหลี", s:true},
+            {n:"ถ้วย", s:true}, {n:"ถุง", s:true}, {n:"ตะเกียบ", s:true}
+        ];
+        menuDB.store_inventory = seed.map(x => ({ name: x.n, price: 0, stock: x.s }));
+        openAdmin();
+    }
+
+    function toggleShopStatus() {
+        if(!menuDB.system_config) menuDB.system_config = [];
+        if(!menuDB.system_config[0]) menuDB.system_config[0] = { name: "", price: 0, stock: true };
+        let config = menuDB.system_config[0];
+        config.stock = !config.stock;
+        if(!config.stock && !config.name) config.name = new Date().toISOString().split('T')[0];
+        else if (config.stock) config.name = "";
+        openAdmin();
+    }
+
+    function updateReopenDate(val) { if(menuDB.system_config[0]) menuDB.system_config[0].name = val; }
+
+    function openAdmin() {
+        const area = document.getElementById('admin_manager_area'); area.innerHTML = '';
+        if(currentAdminMode === 'menu') {
+            document.getElementById('adminModalTitle').innerText = "🛠️ จัดการเมนู & สต็อก";
+            if(!menuDB.system_config) menuDB.system_config = [];
+            let config = menuDB.system_config[0] || { name: "", price: 0, stock: true };
+            menuDB.system_config[0] = config;
+            const shopDiv = document.createElement('div');
+            shopDiv.style.cssText = "background: #f8d7da; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 2px solid #f5c6cb;";
+            shopDiv.innerHTML = `<h3 style="margin-top:0; color: #721c24;">🛑 สถานะร้าน</h3><button type="button" style="background: ${config.stock ? '#2e7d32' : '#d32f2f'}; color: white; padding: 15px; width: 100%; border: none; border-radius: 10px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-bottom: 10px;" onclick="toggleShopStatus()">${config.stock ? '🟢 ร้านกำลังเปิด (กดเพื่อปิดร้าน)' : '🔴 ร้านปิดอยู่ (กดเพื่อเปิดร้าน)'}</button><button type="button" style="background: #5d4037; color: white; padding: 10px; width: 100%; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; margin-bottom: 10px;" onclick="currentAdminMode='store'; openAdmin()">📦 จัดการสต็อกของสด (Store)</button><div style="display: ${config.stock ? 'none' : 'block'}; text-align: left; background: white; padding: 10px; border-radius: 8px;"><label>ปิดถึงวันที่ (เปิดอัตโนมัติ 23:59 น.):</label><input type="date" class="admin-input" style="width: 100%; margin-top: 5px; box-sizing: border-box;" value="${config.name}" onchange="updateReopenDate(this.value)"></div>`;
+            area.appendChild(shopDiv);
+            for (let section in menuDB) { if (section !== 'system_config' && section !== 'store_inventory') renderAdminSection(section, area); }
+        } else {
+            document.getElementById('adminModalTitle').innerText = "📦 Store Inventory";
+            const btnWrap = document.createElement('div');
+            btnWrap.innerHTML = `<button type="button" style="width:100%; padding:10px; margin-bottom:10px; background:#666; color:white; border:none; border-radius:10px; cursor:pointer;" onclick="currentAdminMode='menu'; openAdmin()">⬅️ กลับหน้าจัดการเมนู</button><button type="button" class="btn-seed" onclick="seedStoreData()">🔄 ดึงรายการวัตถุดิบทั้งหมด (ไม่ต้องพิมพ์เอง)</button>`;
+            area.appendChild(btnWrap);
+            if(!menuDB.store_inventory) menuDB.store_inventory = [];
+            renderAdminSection('store_inventory', area);
+        }
+        document.getElementById('adminInventoryModal').style.display = 'flex';
+    }
+
+    function renderAdminSection(section, area) {
+        const secDiv = document.createElement('div'); secDiv.className = 'admin-section';
+        secDiv.innerHTML = `<b>หมวด: ${section}</b>`;
+        menuDB[section].forEach((item, index) => {
+            const row = document.createElement('div'); row.className = 'admin-item-row';
+            row.innerHTML = `<input type="text" class="admin-input" style="flex:2" value="${item.name}" onchange="menuDB['${section}'][${index}].name=this.value"><input type="number" class="admin-input" style="width:60px" value="${item.price}" onchange="menuDB['${section}'][${index}].price=parseInt(this.value)"><button type="button" class="status-toggle ${item.stock?'status-on':'status-off'}" onclick="menuDB['${section}'][${index}].stock=!menuDB['${section}'][${index}].stock; openAdmin()">${item.stock?'มีของ':'หมด'}</button><button type="button" class="btn-del" onclick="menuDB['${section}'].splice(${index}, 1); openAdmin()">❌</button>`;
+            secDiv.appendChild(row);
+        });
+        const addBtn = document.createElement('button'); addBtn.className = 'btn-add'; addBtn.innerText = `+ เพิ่มใน ${section}`;
+        addBtn.onclick = () => { menuDB[section].push({ name: "ของใหม่", price: 0, stock: true }); openAdmin(); };
+        secDiv.appendChild(addBtn); area.appendChild(secDiv);
+    }
+
+    async function saveAndCloseAdmin() {
+        const loader = document.getElementById('loader'); loader.style.display = 'flex'; loader.innerText = "กำลังบันทึกและอัปเดตข้อมูล...";
+        try {
+            const { data: currentData } = await _supabase.from('menu_items').select('id');
+            if (currentData && currentData.length > 0) await _supabase.from('menu_items').delete().in('id', currentData.map(d => d.id));
+            const list = [];
+            for (let cat in menuDB) { menuDB[cat].forEach(i => { if(i.name) list.push({ category: cat, name: i.name, price: i.price || 0, stock: i.stock }); }); }
+            if (list.length > 0) { const { error: insError } = await _supabase.from('menu_items').insert(list); if(insError) throw insError; }
+            if(currentAdminMode === 'store') {
+                let avail = ""; let out = "";
+                menuDB.store_inventory.forEach(item => { if(item.stock) avail += `\n ✅ ${item.name}`; else out += `\n ❌ ${item.name}`; });
+                let storeMsg = `📦 รายงานสต็อกวัตถุดิบ (Store Update)\n------------------\n🟢 มีของอยู่:${avail || '\n- ไม่มี -'}\n\n🔴 ของหมด/ต้องซื้อ:${out || '\n- ไม่มี -'}`;
+                const sendTG = (id) => fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ chat_id: id, text: storeMsg }) });
+                await Promise.all([sendTG(CHAT_ID), sendTG(GROUP_CHAT_ID)]);
+            }
+            alert('บันทึกสำเร็จ!'); document.getElementById('adminInventoryModal').style.display = 'none'; location.reload();
+        } catch (e) { console.error(e); alert('บันทึกไม่สำเร็จ: ' + e.message); } finally { loader.style.display = 'none'; }
+    }
+
+    function closeModal() { document.getElementById('paymentModal').style.display = 'none'; location.reload(); }
+    loadMenu();
 </script>
 </body>
 </html>
