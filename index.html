@@ -109,11 +109,17 @@
             <div id="address_section" style="display:none;">
                 <input type="text" name="address" id="address_input" class="input-text" placeholder="พิกัด/ที่อยู่">
             </div>
-            <input type="text" name="note" class="input-text" placeholder="โน้ตเพิ่มเติม">
+            <input type="text" name="note" class="input-text" placeholder="โน้ตรวม (ถ้ามี)">
         </div>
 
-        <div class="total-box">รวมเงินทั้งหมด <span id="total_display">0</span> บาท</div>
-        <button type="submit" id="submitBtn">ยืนยันการสั่งอาหาร</button>
+        <div id="cart_summary" style="display:none; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #81c784; font-size: 0.9em; color: #2e7d32;"></div>
+
+        <div class="total-box">รวมเงินชามปัจจุบัน <span id="total_display">0</span> บาท</div>
+
+        <button type="button" onclick="addToCart('new')" style="background-color: #ff9800; box-shadow: 0 4px #e65100; font-size: 1.1em; padding: 12px; margin-top: 15px;">🛒 บันทึกชามนี้ แล้วสั่งเมนูอื่นเพิ่ม</button>
+        <button type="button" onclick="addToCart('duplicate')" style="background-color: #2196f3; box-shadow: 0 4px #0b7dda; font-size: 1.1em; padding: 12px; margin-top: 10px;">✌️ บันทึกชามนี้ แล้วเพิ่มแบบเดียวกันอีก 1 ที่</button>
+        
+        <button type="submit" id="submitBtn">✅ ยืนยันการสั่งอาหารทั้งหมด</button>
         <button type="button" class="btn-contact" onclick="window.location.href='https://www.facebook.com/share/1ZeDBC4aAM/'">💬 ติดต่อสอบถาม/แจ้งปัญหา (Facebook)</button>
     </form>
 </div>
@@ -132,6 +138,7 @@
 
     let menuDB = { system_config:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
     let currentAdminMode = 'menu';
+    let cart = [];
 
     async function loadMenu() {
         try {
@@ -255,13 +262,7 @@
         document.getElementById('address_section').style.display = (v.includes('จัดส่ง')) ? 'block' : 'none'; 
     }
 
-    document.getElementById('orderForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const price = calculateTotal();
-        const fd = new FormData(this);
-        const btn = document.getElementById('submitBtn');
-        if (!fd.get('main_menu') && price === 0) { alert('กรุณาเลือกเมนูอาหาร'); return; }
-        btn.disabled = true; btn.innerText = "กำลังส่ง...";
+    function buildCurrentItemString(fd) {
         let orderDetails = `🍜 เมนูหลัก: ${fd.get('main_menu') || 'ไม่ได้เลือก'}`;
         if(fd.get('flower_flavor')) orderDetails += `\n🍲 รสชาติ: ${fd.get('flower_flavor')}`;
         let hasCheese = (fd.get('main_menu') === 'มาม่าดอกไม้');
@@ -277,18 +278,112 @@
         fd.getAll('extra_menu').forEach(ex => { extrasMsg += `\n - ${ex}`; if(ex.includes("ชีสแผ่น")) hasCheese = true; });
         fd.getAll('extra').forEach(ex => { extrasMsg += `\n - ${ex}`; if(ex.includes("ชีสแผ่น")) hasCheese = true; });
         if(extrasMsg) orderDetails += `\n🍱 เพิ่มเติม:${extrasMsg}`;
+        
+        let spicy = fd.get('spicy_level') || '-';
+        orderDetails = `🌶️ เผ็ด: ${spicy}\n` + orderDetails;
+        
         let cheeseWarning = hasCheese ? `\n\n🚨🚨🚨🚨🚨🚨🚨🚨🚨\n🔴 !!! มีชีสแผ่น !!! 🔴\n🚨🚨🚨🚨🚨🚨🚨🚨🚨` : "";
-        let msg = `👤 ลูกค้า: ${fd.get('customer')}\n📱 โทร: ${fd.get('phone') || '-'}\n💰 ยอดรวม: ${price} บาท\n📍 วิธีรับ: ${fd.get('delivery_type')}\n🏠 ที่อยู่: ${fd.get('address') || '-'}\n🌶️ เผ็ด: ${fd.get('spicy_level')}\n${orderDetails}${cheeseWarning}\n📝 โน้ต: ${fd.get('note') || '-'}`;
+        return orderDetails + cheeseWarning;
+    }
+
+    function updateCartUI() {
+        const cartDiv = document.getElementById('cart_summary');
+        if (cart.length > 0) {
+            cartDiv.style.display = 'block';
+            let html = '<b style="font-size:1.1em;">🛒 สรุปรายการในตะกร้า:</b><br>';
+            let grandTotal = 0;
+            cart.forEach((item, index) => {
+                html += `<div style="border-bottom: 1px dashed #a5d6a7; margin-top: 5px; padding-bottom: 5px;">- ชามที่ ${index + 1}: ${item.mainName} <span style="float:right; font-weight:bold;">${item.price}.-</span></div>`;
+                grandTotal += item.price;
+            });
+            html += `<div style="margin-top:10px; font-weight:bold; font-size:1.2em; text-align:right;">รวมทั้งหมดในตะกร้า: ${grandTotal} บาท</div>`;
+            cartDiv.innerHTML = html;
+        } else {
+            cartDiv.style.display = 'none';
+        }
+    }
+
+    function clearFoodSelection() {
+        document.querySelectorAll('input[name="main_menu"], input[name="flower_flavor"], input[name="request_candle"], input[name="extra_menu"], input[name="extra"]').forEach(el => el.checked = false);
+        document.querySelector('input[name="spicy_level"][value="คูณ 1"]').checked = true;
+        document.querySelectorAll('.qty-val').forEach(el => el.innerText = "0");
+        toggleSpecialMenu(false);
+        calculateTotal();
+    }
+
+    function addToCart(type) {
+        const fd = new FormData(document.getElementById('orderForm'));
+        const price = calculateTotal();
+
+        if (!fd.get('main_menu') && price === 0) {
+            alert('กรุณาเลือกเมนูอาหารก่อนกดเพิ่มลงตะกร้าครับ');
+            return;
+        }
+
+        const itemString = buildCurrentItemString(fd);
+        cart.push({
+            mainName: fd.get('main_menu') || 'ไม่ได้เลือก',
+            detail: itemString,
+            price: price
+        });
+
+        if (type === 'new') {
+            clearFoodSelection();
+            alert('บันทึกชามนี้ลงตะกร้าแล้ว! สามารถเลือกเมนูสำหรับชามต่อไปได้เลยครับ (ชื่อและที่อยู่ลูกค้ายังคงเดิม)');
+        } else if (type === 'duplicate') {
+            alert('เพิ่มออเดอร์แบบเดียวกันอีก 1 ชามลงตะกร้าเรียบร้อยแล้ว!');
+        }
+
+        updateCartUI();
+    }
+
+    document.getElementById('orderForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        const currentPrice = calculateTotal();
+
+        if (fd.get('main_menu') || currentPrice > 0) {
+            const itemString = buildCurrentItemString(fd);
+            cart.push({
+                mainName: fd.get('main_menu') || 'ไม่ได้เลือก',
+                detail: itemString,
+                price: currentPrice
+            });
+            clearFoodSelection();
+            updateCartUI();
+        }
+
+        if (cart.length === 0) {
+            alert('กรุณาเลือกเมนูอาหารก่อนยืนยันการสั่งครับ');
+            return;
+        }
+
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true; btn.innerText = "กำลังส่ง...";
+
+        let grandTotal = 0;
+        let allItemsMsg = "";
+
+        cart.forEach((item, index) => {
+            grandTotal += item.price;
+            allItemsMsg += `\n\n--- 🍜 [ชามที่ ${index + 1}] ---\n${item.detail}\n💰 ราคาชามนี้: ${item.price} บาท`;
+        });
+
+        let msg = `👤 ลูกค้า: ${fd.get('customer')}\n📱 โทร: ${fd.get('phone') || '-'}\n📍 วิธีรับ: ${fd.get('delivery_type')}\n🏠 ที่อยู่: ${fd.get('address') || '-'}\n📝 โน้ตรวม: ${fd.get('note') || '-'}\n\n🛒 === รายการอาหาร (${cart.length} ชาม) ===${allItemsMsg}\n\n====================\n💸 ยอดรวมทั้งบิล: ${grandTotal} บาท\n====================`;
+
         const send = (id) => fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ chat_id: id, text: msg })
         });
+        
         try {
             await Promise.all([send(CHAT_ID), send(GROUP_CHAT_ID)]);
-            document.getElementById('modal_total').innerText = "ยอดชำระ: " + price + " บาท";
+            document.getElementById('modal_total').innerText = "ยอดชำระ: " + grandTotal + " บาท";
             document.getElementById('paymentModal').style.display = 'flex';
-        } catch (err) { alert('เกิดข้อผิดพลาดในการส่งข้อมูล'); } finally { btn.disabled = false; btn.innerText = "ยืนยันการสั่งอาหาร"; }
+            cart = [];
+            updateCartUI();
+        } catch (err) { alert('เกิดข้อผิดพลาดในการส่งข้อมูล'); } finally { btn.disabled = false; btn.innerText = "✅ ยืนยันการสั่งอาหารทั้งหมด"; }
     };
 
     let pressTimer;
@@ -371,7 +466,7 @@
             if (list.length > 0) { const { error: insError } = await _supabase.from('menu_items').insert(list); if(insError) throw insError; }
             if(currentAdminMode === 'store') {
                 let avail = ""; let out = "";
-                menuDB.store_inventory.forEach(item => { if(item.stock) avail += `\n ✅ ${item.name}`; else out += `\n ❌ ${item.name}`; });
+                menuDB.store_inventory.forEach(item => { if(item.stock) avail += `\n ✅ ${item.name} (${item.price})`; else out += `\n ❌ ${item.name} (${item.price})`; });
                 let storeMsg = `📦 รายงานสต็อกวัตถุดิบ (Store Update)\n------------------\n🟢 มีของอยู่:${avail || '\n- ไม่มี -'}\n\n🔴 ของหมด/ต้องซื้อ:${out || '\n- ไม่มี -'}`;
                 const sendTG = (id) => fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ chat_id: id, text: storeMsg }) });
                 await Promise.all([sendTG(CHAT_ID), sendTG(GROUP_CHAT_ID)]);
