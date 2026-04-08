@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COGS - คำนวณต้นทุนและกำไร (Pro)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border-left: 5px solid #d32f2f; }
+        .header-bar h1 { margin: 0; color: #a52a2a; font-size: 1.8em; }
+        .btn-group { display: flex; gap: 10px; }
+        button { font-family: 'Kanit', sans-serif; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1em; }
+        .btn-back { background: #555; color: white; }
+        .btn-sync { background: #2196f3; color: white; box-shadow: 0 3px #1976d2; }
+        .btn-save { background: #2e7d32; color: white; box-shadow: 0 3px #1b5e20; }
+        .btn-add { background: #ff9800; color: white; padding: 5px 15px; font-size: 0.9em; margin-top: 10px; }
+        .btn-del { background: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        .panel { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .panel h2 { color: #5d4037; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #fdfaf5; color: #a52a2a; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+        td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
+        .excel-input { width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 5px; font-family: 'Kanit', sans-serif; font-size: 0.95em; box-sizing: border-box; background: #fafafa; transition: 0.2s; }
+        .excel-input:focus { border: 1px solid #2196f3; background: #fff; outline: none; box-shadow: 0 0 5px rgba(33,150,243,0.3); }
+        .cost-display { font-weight: bold; color: #2e7d32; }
+        
+        .recipe-card { border: 1px solid #ddd; border-radius: 10px; margin-bottom: 15px; background: #fff; overflow: hidden; }
+        .recipe-header { background: #fdfaf5; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; font-weight: bold; color: #333; }
+        .recipe-body { padding: 15px; }
+        .recipe-footer { background: #e8f5e9; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 1.1em; font-weight: bold; color: #2e7d32; border-top: 1px solid #c8e6c9; }
+        
+        .profit-high { color: #2e7d32; }
+        .profit-low { color: #d32f2f; }
+        
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; font-weight: bold; color: #a52a2a; font-size: 1.2em; }
+        .spinner { border: 5px solid #f3f3f3; border-top: 5px solid #a52a2a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div><span id="loader-text">กำลังประมวลผล...</span></div>
+
+<div class="header-bar">
+    <h1>📊 ระบบคำนวณต้นทุน (COGS Pro)</h1>
+    <div class="btn-group">
+        <button class="btn-back" onclick="window.location.href='index.html'">⬅️ กลับหน้าร้าน</button>
+        <button class="btn-sync" onclick="syncFromWeb()">🔄 ดึงเมนูจากหน้าเว็บ</button>
+        <button class="btn-save" onclick="saveToSupabase()">💾 บันทึกขึ้น Cloud</button>
+    </div>
+</div>
+
+<div class="panel">
+    <h2>1. ฐานข้อมูลต้นทุนวัตถุดิบ (Raw Materials)</h2>
+    <p style="font-size:0.9em; color:#666;">กำหนดราคาที่ซื้อมาจริง และปริมาณที่ได้ เพื่อหา "ต้นทุนต่อหน่วย"</p>
+    <table>
+        <thead>
+            <tr>
+                <th width="25%">ชื่อวัตถุดิบ</th>
+                <th width="15%">ราคาที่ซื้อมา (฿)</th>
+                <th width="15%">ปริมาณต่อแพ็ค</th>
+                <th width="15%">หน่วยวัด (g, ml, ชิ้น)</th>
+                <th width="20%">ต้นทุน/หน่วยวัด</th>
+                <th width="10%">จัดการ</th>
+            </tr>
+        </thead>
+        <tbody id="materials_tbody">
+            </tbody>
+    </table>
+    <button class="btn-add" onclick="addEmptyMaterial()">+ เพิ่มบรรทัดวัตถุดิบ</button>
+</div>
+
+<div class="panel">
+    <h2>2. คำนวณต้นทุนต่อจาน (Recipe Costing)</h2>
+    <p style="font-size:0.9em; color:#666;">เลือกเมนูอาหาร และใส่วัตถุดิบที่ใช้ เพื่อวิเคราะห์กำไรขั้นต้น (Gross Profit)</p>
+    <div id="recipes_container">
+        </div>
+</div>
+
+<script>
+    // การเชื่อมต่อ Supabase เดิมของคุณ
+    const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Data Structure หลัก
+    let cogsData = {
+        materials: [], // { id, name, price, qty, unit, costPerUnit }
+        recipes: []    // { id, name, sellPrice, ingredients: [{ matId, usedQty }] }
+    };
+
+    // ฟังก์ชันเปิด/ปิด Loader
+    function showLoader(text) {
+        document.getElementById('loader-text').innerText = text;
+        document.getElementById('loader').style.display = 'flex';
+    }
+    function hideLoader() {
+        document.getElementById('loader').style.display = 'none';
+    }
+
+    // สร้าง ID สุ่ม
+    function generateId() { return Math.random().toString(36).substr(2, 9); }
+
+    // ==========================================
+    // Core Functions: ดึงข้อมูลและบันทึก (Supabase)
+    // ==========================================
+
+    // โหลดข้อมูล COGS ที่เคยบันทึกไว้
+    async function loadData() {
+        showLoader('กำลังโหลดฐานข้อมูลต้นทุน...');
+        try {
+            const { data, error } = await _supabase.from('menu_items').select('*').eq('category', 'cogs_data');
+            if (data && data.length > 0) {
+                // แกะกล่อง JSON ที่ซ่อนไว้ในคอลัมน์ name
+                cogsData = JSON.parse(data[0].name);
+            } else {
+                // ถ้ายังไม่มี ให้ลองดึงข้อมูลเริ่มต้นครั้งแรก
+                await syncFromWeb(true);
+            }
+            renderAll();
+        } catch (e) {
+            console.error('Load Error:', e);
+            alert('โหลดข้อมูลล้มเหลว');
+        }
+        hideLoader();
+    }
+
+    // ดึงรายชื่อจากเมนูหน้าร้านมารวมอัตโนมัติ
+    async function syncFromWeb(isInitialLoad = false) {
+        if (!isInitialLoad) {
+            if(!confirm("ระบบจะดึงรายชื่อเมนูและสต๊อกจากหน้าเว็บมาเพิ่มในตารางนี้ (ข้อมูลเดิมที่คุณพิมพ์ไว้จะไม่หาย) ยืนยันหรือไม่?")) return;
+            showLoader('กำลังซิงค์ข้อมูลจากหน้าร้าน...');
+        }
+        try {
+            const { data, error } = await _supabase.from('menu_items').select('*');
+            if (data) {
+                // 1. ดึงวัตถุดิบจากหมวด store_inventory
+                let storeItems = data.filter(item => item.category === 'store_inventory');
+                storeItems.forEach(item => {
+                    let exists = cogsData.materials.find(m => m.name === item.name);
+                    if (!exists) {
+                        cogsData.materials.push({
+                            id: generateId(), name: item.name, price: 0, qty: 1, unit: 'ชิ้น', costPerUnit: 0
+                        });
+                    }
+                });
+
+                // 2. ดึงเมนูอาหาร (main_ok, main_buldak, main_mama, etc.)
+                let menuCategories = ['main_ok', 'main_buldak', 'main_mama', 'main_waiwai', 'main_yumyum'];
+                let mainMenus = data.filter(item => menuCategories.includes(item.category));
+                mainMenus.forEach(item => {
+                    let exists = cogsData.recipes.find(r => r.name === item.name);
+                    if (!exists) {
+                        cogsData.recipes.push({
+                            id: generateId(), name: item.name, sellPrice: item.price || 0, ingredients: []
+                        });
+                    } else {
+                        // อัปเดตราคาขายให้ตรงกับหน้าเว็บล่าสุดเสมอ
+                        exists.sellPrice = item.price || 0;
+                    }
+                });
+                
+                if (!isInitialLoad) {
+                    renderAll();
+                    alert('ดึงข้อมูลสำเร็จ! ระบบพบเมนูและวัตถุดิบใหม่และนำมาเรียงให้แล้วครับ');
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            if (!isInitialLoad) alert('เกิดข้อผิดพลาดในการดึงข้อมูล');
+        }
+        if (!isInitialLoad) hideLoader();
+    }
+
+    // บันทึกกลับขึ้น Supabase (ใช้เทคนิคยัดใส่ category=cogs_data เพื่อไม่ต้องแก้ฐานข้อมูล)
+    async function saveToSupabase() {
+        showLoader('กำลังบันทึกข้อมูลขึ้น Cloud...');
+        try {
+            // ลบของเก่าออกก่อน
+            const { data: oldData } = await _supabase.from('menu_items').select('id').eq('category', 'cogs_data');
+            if (oldData && oldData.length > 0) {
+                await _supabase.from('menu_items').delete().in('id', oldData.map(d => d.id));
+            }
+            
+            // Insert ใหม่เป็น JSON string
+            const payload = {
+                category: 'cogs_data',
+                name: JSON.stringify(cogsData),
+                price: 0,
+                stock: true
+            };
+            
+            const { error } = await _supabase.from('menu_items').insert([payload]);
+            if (error) throw error;
+            
+            alert('บันทึกต้นทุนขึ้นคลาวด์เรียบร้อยแล้วจ่าฝูง!');
+        } catch (e) {
+            console.error(e);
+            alert('บันทึกไม่สำเร็จ: ' + e.message);
+        }
+        hideLoader();
+    }
+
+    // ==========================================
+    // Rendering & Logic: Excel UI
+    // ==========================================
+
+    function renderAll() {
+        renderMaterials();
+        renderRecipes();
+    }
+
+    // --- ส่วนวัตถุดิบ ---
+    function renderMaterials() {
+        const tbody = document.getElementById('materials_tbody');
+        tbody.innerHTML = '';
+        
+        cogsData.materials.forEach((mat, index) => {
+            mat.costPerUnit = mat.qty > 0 ? (mat.price / mat.qty) : 0; // คำนวณต้นทุนต่อหน่วยเบื้องหลัง
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="excel-input" value="${mat.name}" onchange="updateMaterial(${index}, 'name', this.value)"></td>
+                <td><input type="number" class="excel-input" value="${mat.price}" onchange="updateMaterial(${index}, 'price', this.value)"></td>
+                <td><input type="number" class="excel-input" value="${mat.qty}" onchange="updateMaterial(${index}, 'qty', this.value)"></td>
+                <td><input type="text" class="excel-input" value="${mat.unit}" placeholder="เช่น กรัม, ชิ้น" onchange="updateMaterial(${index}, 'unit', this.value)"></td>
+                <td class="cost-display">${mat.costPerUnit.toFixed(2)} บาท / ${mat.unit || 'หน่วย'}</td>
+                <td><button class="btn-del" onclick="deleteMaterial(${index})">❌</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addEmptyMaterial() {
+        cogsData.materials.push({ id: generateId(), name: '', price: 0, qty: 1, unit: 'กรัม', costPerUnit: 0 });
+        renderAll(); // Re-render ทั้งหมดเพราะเผื่อกระทบ dropdown ในเมนู
+    }
+
+    function updateMaterial(index, field, value) {
+        if(field === 'price' || field === 'qty') value = parseFloat(value) || 0;
+        cogsData.materials[index][field] = value;
+        renderAll(); // อัปเดตและคำนวณใหม่ทั้งหน้า
+    }
+
+    function deleteMaterial(index) {
+        if(confirm('ลบวัตถุดิบนี้? (อาจกระทบเมนูที่ใช้อยู่)')) {
+            cogsData.materials.splice(index, 1);
+            renderAll();
+        }
+    }
+
+    // --- ส่วนเมนูอาหาร (Recipes) ---
+    function renderRecipes() {
+        const container = document.getElementById('recipes_container');
+        container.innerHTML = '';
+
+        cogsData.recipes.forEach((recipe, rIndex) => {
+            let totalCost = 0;
+            
+            // สร้าง HTML สำหรับรายการส่วนผสม
+            let ingredientsHTML = '';
+            recipe.ingredients.forEach((ing, iIndex) => {
+                let mat = cogsData.materials.find(m => m.id === ing.matId);
+                let matName = mat ? mat.name : 'วัตถุดิบถูกลบ';
+                let matUnit = mat ? mat.unit : '';
+                let ingCost = mat ? (mat.costPerUnit * ing.usedQty) : 0;
+                totalCost += ingCost;
+
+                // Dropdown วัตถุดิบ
+                let matOptions = cogsData.materials.map(m => `<option value="${m.id}" ${m.id === ing.matId ? 'selected' : ''}>${m.name} (${m.costPerUnit.toFixed(2)} บ./${m.unit})</option>`).join('');
+
+                ingredientsHTML += `
+                    <tr>
+                        <td width="40%">
+                            <select class="excel-input" onchange="updateIngredient(${rIndex}, ${iIndex}, 'matId', this.value)">
+                                <option value="">-- เลือกวัตถุดิบ --</option>
+                                ${matOptions}
+                            </select>
+                        </td>
+                        <td width="20%"><input type="number" class="excel-input" value="${ing.usedQty}" onchange="updateIngredient(${rIndex}, ${iIndex}, 'usedQty', this.value)"></td>
+                        <td width="15%">${matUnit}</td>
+                        <td width="15%" style="text-align:right;">${ingCost.toFixed(2)} ฿</td>
+                        <td width="10%" style="text-align:right;"><button class="btn-del" onclick="deleteIngredient(${rIndex}, ${iIndex})">❌</button></td>
+                    </tr>
+                `;
+            });
+
+            // คำนวณกำไร
+            let profit = recipe.sellPrice - totalCost;
+            let margin = recipe.sellPrice > 0 ? ((profit / recipe.sellPrice) * 100).toFixed(1) : 0;
+            let profitClass = margin >= 40 ? 'profit-high' : 'profit-low'; // สีเขียวถ้ากำไร > 40%
+
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.innerHTML = `
+                <div class="recipe-header">
+                    <span>🍜 ${recipe.name}</span>
+                    <span>ราคาขาย: <input type="number" class="excel-input" style="width:80px; display:inline-block;" value="${recipe.sellPrice}" onchange="updateRecipe(${rIndex}, 'sellPrice', this.value)"> บาท</span>
+                </div>
+                <div class="recipe-body">
+                    <table style="margin-top:0;">
+                        ${ingredientsHTML}
+                    </table>
+                    <button class="btn-add" style="background:#42a5f5;" onclick="addIngredient(${rIndex})">+ เพิ่มส่วนผสม</button>
+                </div>
+                <div class="recipe-footer">
+                    <span>ต้นทุนรวม: ${totalCost.toFixed(2)} บาท</span>
+                    <span class="${profitClass}">กำไร: ${profit.toFixed(2)} บาท (${margin}%)</span>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function updateRecipe(rIndex, field, value) {
+        cogsData.recipes[rIndex][field] = parseFloat(value) || 0;
+        renderRecipes();
+    }
+
+    function addIngredient(rIndex) {
+        if(cogsData.materials.length === 0) {
+            alert('กรุณาเพิ่มฐานข้อมูลวัตถุดิบด้านบนก่อนครับ'); return;
+        }
+        cogsData.recipes[rIndex].ingredients.push({ matId: '', usedQty: 0 });
+        renderRecipes();
+    }
+
+    function updateIngredient(rIndex, iIndex, field, value) {
+        if(field === 'usedQty') value = parseFloat(value) || 0;
+        cogsData.recipes[rIndex].ingredients[iIndex][field] = value;
+        renderRecipes();
+    }
+
+    function deleteIngredient(rIndex, iIndex) {
+        cogsData.recipes[rIndex].ingredients.splice(iIndex, 1);
+        renderRecipes();
+    }
+
+    // เริ่มต้นทำงาน
+    window.onload = loadData;
+
+</script>
+</body>
+</html>
