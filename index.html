@@ -41,6 +41,11 @@
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #a52a2a; }
         .btn-contact { background-color: #1877f2; box-shadow: 0 4px #0d47a1; margin-top: 10px; font-size: 1em; padding: 12px; }
         .btn-seed { background-color: #ff9800; color: white; border: none; padding: 10px; border-radius: 10px; margin-bottom: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        
+        /* เพิ่ม CSS สำหรับข้อความวิ่งแทนการใช้ Tag Marquee แบบเก่า */
+        .marquee-box { overflow: hidden; white-space: nowrap; background: #fffde7; padding: 8px 12px; border-radius: 10px; border: 1px dashed #fbc02d; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; width: 100%; }
+        .marquee-content { display: inline-block; color: #d32f2f; font-weight: bold; font-size: 1.1em; padding-left: 100%; animation: marquee-anim 12s linear infinite; }
+        @keyframes marquee-anim { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
     </style>
 </head>
 <body>
@@ -50,6 +55,12 @@
 <div class="container">
     <h2 id="adminTrigger">KOREAN MAMA WRAP</h2>
     <p id="subtitle" style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ โดย <b>cittamama bot</b></p>
+
+    <div id="marquee_container" style="display:none; margin-bottom: 15px;">
+        <div class="marquee-box">
+            <div id="marquee_text" class="marquee-content"></div>
+        </div>
+    </div>
 
     <div id="closed_overlay" style="display:none; text-align:center; padding: 40px 10px; background: #fffde7; border-radius: 15px; border: 2px dashed #d32f2f; margin-top: 20px;">
         <h1 style="color: #d32f2f; font-size: 3em; margin: 0;">🔴</h1>
@@ -136,7 +147,7 @@
     const CHAT_ID = '7006062970'; 
     const GROUP_CHAT_ID = '-1003862093556';
 
-    let menuDB = { system_config:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
+    let menuDB = { system_config:[], system_marquee:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
     let currentAdminMode = 'menu';
     let cart = [];
 
@@ -144,9 +155,17 @@
         try {
             const { data, error } = await _supabase.from('menu_items').select('*').order('name');
             if (data && data.length > 0) {
-                const freshDB = { system_config:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
+                const freshDB = { system_config:[], system_marquee:[], main_ok:[], main_buldak:[], main_mama:[], main_waiwai:[], main_yumyum:[], flower_flavors:[], sides:[], snacks:[], extras:[], store_inventory:[] };
                 data.forEach(item => { if(freshDB[item.category]) freshDB[item.category].push(item); });
                 menuDB = freshDB;
+            }
+
+            // จัดการข้อความวิ่ง
+            if (menuDB.system_marquee && menuDB.system_marquee.length > 0 && menuDB.system_marquee[0].name) {
+                document.getElementById('marquee_text').innerText = menuDB.system_marquee[0].name;
+                document.getElementById('marquee_container').style.display = 'block';
+            } else {
+                document.getElementById('marquee_container').style.display = 'none';
             }
 
             let isShopClosed = false;
@@ -420,6 +439,12 @@
 
     function updateReopenDate(val) { if(menuDB.system_config[0]) menuDB.system_config[0].name = val; }
 
+    function updateMarqueeText(val) {
+        if(!menuDB.system_marquee) menuDB.system_marquee = [];
+        if(!menuDB.system_marquee[0]) menuDB.system_marquee[0] = { name: "", price: 0, stock: true };
+        menuDB.system_marquee[0].name = val;
+    }
+
     function openAdmin() {
         const area = document.getElementById('admin_manager_area'); area.innerHTML = '';
         if(currentAdminMode === 'menu') {
@@ -427,11 +452,22 @@
             if(!menuDB.system_config) menuDB.system_config = [];
             let config = menuDB.system_config[0] || { name: "", price: 0, stock: true };
             menuDB.system_config[0] = config;
+            
             const shopDiv = document.createElement('div');
             shopDiv.style.cssText = "background: #f8d7da; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 2px solid #f5c6cb;";
             shopDiv.innerHTML = `<h3 style="margin-top:0; color: #721c24;">🛑 สถานะร้าน</h3><button type="button" style="background: ${config.stock ? '#2e7d32' : '#d32f2f'}; color: white; padding: 15px; width: 100%; border: none; border-radius: 10px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-bottom: 10px;" onclick="toggleShopStatus()">${config.stock ? '🟢 ร้านกำลังเปิด (กดเพื่อปิดร้าน)' : '🔴 ร้านปิดอยู่ (กดเพื่อเปิดร้าน)'}</button><button type="button" style="background: #5d4037; color: white; padding: 10px; width: 100%; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; margin-bottom: 10px;" onclick="currentAdminMode='store'; openAdmin()">📦 จัดการสต็อกของสด (Store)</button><button type="button" style="background: #1976d2; color: white; padding: 10px; width: 100%; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; margin-bottom: 10px;" onclick="window.location.href='cogs.html'">📊 คำนวณต้นทุน</button><div style="display: ${config.stock ? 'none' : 'block'}; text-align: left; background: white; padding: 10px; border-radius: 8px;"><label>ปิดถึงวันที่ (เปิดอัตโนมัติ 23:59 น.):</label><input type="date" class="admin-input" style="width: 100%; margin-top: 5px; box-sizing: border-box;" value="${config.name}" onchange="updateReopenDate(this.value)"></div>`;
             area.appendChild(shopDiv);
-            for (let section in menuDB) { if (section !== 'system_config' && section !== 'store_inventory') renderAdminSection(section, area); }
+
+            if(!menuDB.system_marquee) menuDB.system_marquee = [];
+            if(!menuDB.system_marquee[0]) menuDB.system_marquee[0] = { name: "", price: 0, stock: true };
+            let marqueeConfig = menuDB.system_marquee[0];
+
+            const marqueeDiv = document.createElement('div');
+            marqueeDiv.style.cssText = "background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; border: 2px solid #90caf9;";
+            marqueeDiv.innerHTML = `<h3 style="margin-top:0; color: #1565c0;">📢 ข้อความประกาศ (รถทัวร์)</h3><label style="font-size: 0.9em; color: #333;">พิมพ์ข้อความที่ต้องการให้วิ่งผ่านหน้าจอ (เว้นว่างไว้หากไม่ต้องการให้โชว์)</label><input type="text" class="admin-input" style="width: 100%; margin-top: 5px; box-sizing: border-box; font-size: 1em; padding: 10px;" placeholder="เช่น วันที่ 13 ถึง 16 ไปขายในเมือง" value="${marqueeConfig.name}" onchange="updateMarqueeText(this.value)">`;
+            area.appendChild(marqueeDiv);
+
+            for (let section in menuDB) { if (section !== 'system_config' && section !== 'system_marquee' && section !== 'store_inventory') renderAdminSection(section, area); }
         } else {
             document.getElementById('adminModalTitle').innerText = "📦 Store Inventory";
             const btnWrap = document.createElement('div');
@@ -462,7 +498,11 @@
             const { data: currentData } = await _supabase.from('menu_items').select('id');
             if (currentData && currentData.length > 0) await _supabase.from('menu_items').delete().in('id', currentData.map(d => d.id));
             const list = [];
-            for (let cat in menuDB) { menuDB[cat].forEach(i => { if(i.name) list.push({ category: cat, name: i.name, price: i.price || 0, stock: i.stock }); }); }
+            for (let cat in menuDB) { 
+                menuDB[cat].forEach(i => { 
+                    if(i.name !== undefined && i.name !== "") list.push({ category: cat, name: i.name, price: i.price || 0, stock: i.stock }); 
+                }); 
+            }
             if (list.length > 0) { const { error: insError } = await _supabase.from('menu_items').insert(list); if(insError) throw insError; }
             if(currentAdminMode === 'store') {
                 let avail = ""; let out = "";
