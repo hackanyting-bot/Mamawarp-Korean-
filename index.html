@@ -64,6 +64,30 @@
         .marquee-box { overflow: hidden; white-space: nowrap; background: #fffde7; padding: 8px 12px; border-radius: 10px; border: 1px dashed #fbc02d; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; width: 100%; }
         .marquee-content { display: inline-block; color: #d32f2f; font-weight: bold; font-size: 1.1em; padding-left: 100%; animation: marquee-anim 12s linear infinite; }
         @keyframes marquee-anim { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+        /* สไตล์ปุ่มสีเหลืองทอง */
+        .gold-button {
+            display: block;
+            padding: 15px;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            color: #000000;
+            text-decoration: none;
+            background: linear-gradient(45deg, #FFD700, #FFB900);
+            border: 2px solid #D4AF37;
+            border-radius: 12px;
+            box-shadow: 0 4px #8b0000;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .gold-button:hover {
+            background: linear-gradient(45deg, #FFB900, #FFD700);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -154,6 +178,7 @@
         
         <button type="submit" id="submitBtn">✅ ยืนยันการสั่งอาหารทั้งหมด</button>
         <button type="button" class="btn-contact" onclick="window.location.href='https://www.facebook.com/share/1ZeDBC4aAM/'">💬 ติดต่อสอบถาม/แจ้งปัญหา (Facebook)</button>
+        <a href="https://www.wongnai.com/businesses/3412215Is/card" class="gold-button">สมัครสมาชิกสะสมคะแนน</a>
     </form>
 </div>
 
