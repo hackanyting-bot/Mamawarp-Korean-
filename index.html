@@ -11,7 +11,8 @@
     <meta name="apple-mobile-web-app-title" content="MAMA WRAP">
     <meta name="theme-color" content="#d32f2f">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22KOREAN%20MAMA%20WRAP%22,%22short_name%22:%22MAMA%20WRAP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%23d32f2f%22}">
+    
+    <link rel="manifest" id="manifest-placeholder">
 
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -28,7 +29,6 @@
         .container { 
             max-width: 500px; 
             margin: auto; 
-            /* ปรับพื้นหลังให้โปร่งแสง (0.85) และเพิ่มเอฟเฟกต์เบลอ */
             background: rgba(255, 255, 255, 0.55); 
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -69,12 +69,10 @@
         .btn-contact { background-color: #1877f2; box-shadow: 0 4px #0d47a1; margin-top: 10px; font-size: 1em; padding: 12px; }
         .btn-seed { background-color: #ff9800; color: white; border: none; padding: 10px; border-radius: 10px; margin-bottom: 10px; width: 100%; font-weight: bold; cursor: pointer; }
         
-        /* เพิ่ม CSS สำหรับข้อความวิ่งแทนการใช้ Tag Marquee แบบเก่า */
         .marquee-box { overflow: hidden; white-space: nowrap; background: #fffde7; padding: 8px 12px; border-radius: 10px; border: 1px dashed #fbc02d; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; width: 100%; }
         .marquee-content { display: inline-block; color: #d32f2f; font-weight: bold; font-size: 1.1em; padding-left: 100%; animation: marquee-anim 12s linear infinite; }
         @keyframes marquee-anim { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* สไตล์ปุ่มสีเหลืองทอง */
         .gold-button {
             display: block;
             padding: 15px;
@@ -93,12 +91,8 @@
             box-sizing: border-box;
             width: 100%;
         }
-        .gold-button:hover {
-            background: linear-gradient(45deg, #FFB900, #FFD700);
-            transform: translateY(-2px);
-        }
+        .gold-button:hover { background: linear-gradient(45deg, #FFB900, #FFD700); transform: translateY(-2px); }
 
-        /* สไตล์ปุ่มติดตั้งแอป */
         .install-button {
             display: block;
             padding: 15px;
@@ -116,10 +110,7 @@
             box-sizing: border-box;
             width: 100%;
         }
-        .install-button:hover {
-            background-color: #2c3e50;
-            transform: translateY(-2px);
-        }
+        .install-button:hover { background-color: #2c3e50; transform: translateY(-2px); }
     </style>
 </head>
 <body>
@@ -219,6 +210,37 @@
 <div id="paymentModal"><div class="modal-content"><h2 style="color:#2e7d32;">✅ ส่งออเดอร์แล้ว!</h2><div id="modal_total" style="color:#d32f2f; font-weight:bold; font-size:1.2em; margin:15px 0;"></div><img src="qr-payment.jpg" class="qr-image" alt="QR Payment"><button onclick="closeModal()" style="background:#666; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">กลับไปหน้าหลัก</button></div></div>
 
 <script>
+    /* =========================
+       ✅ PWA System: Manifest & Service Worker แบบ Inline
+    ========================= */
+    const manifestData = {
+        name: "KOREAN MAMA WRAP",
+        short_name: "MAMA WRAP",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#d32f2f"
+    };
+
+    const blobManifest = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blobManifest);
+    document.getElementById('manifest-placeholder').setAttribute('href', manifestURL);
+
+    if ('serviceWorker' in navigator) {
+        const swCode = `
+            self.addEventListener('install', e => self.skipWaiting());
+            self.addEventListener('activate', e => self.clients.claim());
+            self.addEventListener('fetch', e => {});
+        `;
+        const swBlob = new Blob([swCode], { type: 'text/javascript' });
+        const swURL = URL.createObjectURL(swBlob);
+
+        navigator.serviceWorker.register(swURL)
+        .then(() => console.log('SW ready'))
+        .catch(err => console.log('SW Error:', err));
+    }
+    /* ========================= */
+
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -240,7 +262,6 @@
                 menuDB = freshDB;
             }
 
-            // จัดการข้อความวิ่ง
             if (menuDB.system_marquee && menuDB.system_marquee.length > 0 && menuDB.system_marquee[0].name) {
                 document.getElementById('marquee_text').innerText = menuDB.system_marquee[0].name;
                 document.getElementById('marquee_container').style.display = 'block';
@@ -297,8 +318,6 @@
         data.forEach(item => {
             if (!item.stock) return;
             const lbl = document.createElement('label');
-            const onChg = (name === 'main_menu') ? 'onchange="toggleSpecialMenu(true)"' : 'onchange="calculateTotal()"';
-            // ปรับ logic เล็กน้อยให้รองรับค่าที่ส่งมา
             const isSpec = (name === 'main_menu' && item.name === 'มาม่าดอกไม้');
             const finalOnChg = (name === 'main_menu') ? `onchange="toggleSpecialMenu(${isSpec})"` : 'onchange="calculateTotal()"';
             lbl.innerHTML = `<input type="${type}" name="${name}" value="${item.name}" data-price="${item.price}" ${finalOnChg}> ${item.name} <span class="price">${item.price||0}.-</span>`;
@@ -600,22 +619,26 @@
 
     function closeModal() { document.getElementById('paymentModal').style.display = 'none'; location.reload(); }
 
-    // --- Logic สำหรับปุ่มติดตั้งแอป ---
+    /* =========================
+       ✅ Logic ติดตั้งแอป 
+    ========================= */
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
 
+    // 🟢 ซ่อนปุ่มติดตั้งทันทีถ้าทำงานแบบ App อยู่แล้ว
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        installBtn.style.display = 'none';
+        console.log("Running as app - Install button hidden.");
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
-        // ป้องกันไม่ให้เบราว์เซอร์โชว์การแจ้งเตือนติดตั้งอัตโนมัติ
         e.preventDefault();
-        // เก็บ Event ไว้เรียกใช้ภายหลัง
         deferredPrompt = e;
-        // โชว์ปุ่มของเรา
         installBtn.style.display = 'block';
     });
 
     installBtn.addEventListener('click', async () => {
         if (deferredPrompt) {
-            // เรียกหน้าต่างติดตั้งของเบราว์เซอร์ (Chrome/Android)
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') {
@@ -624,7 +647,6 @@
             }
             deferredPrompt = null;
         } else {
-            // แก้ไขข้อความ Android (Chrome) ให้สั้นลงเพื่อไม่ให้โดนตัด
             alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone (iOS):\n1. กดปุ่ม Share (สี่เหลี่ยมลูกศรขึ้น)\n2. เลือก "Add to Home Screen"\n\n🤖 Android (Chrome):\n1. กดปุ่มจุด 3 จุดที่มุมขวาบน\n2. เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอโฮม"');
         }
     });
