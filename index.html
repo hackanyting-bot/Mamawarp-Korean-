@@ -88,6 +88,29 @@
             background: linear-gradient(45deg, #FFB900, #FFD700);
             transform: translateY(-2px);
         }
+
+        /* สไตล์ปุ่มติดตั้งแอป */
+        .install-button {
+            display: block;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            color: #ffffff;
+            background-color: #34495e;
+            border: 2px solid #2c3e50;
+            border-radius: 12px;
+            box-shadow: 0 4px #1a252f;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .install-button:hover {
+            background-color: #2c3e50;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -96,7 +119,7 @@
 
 <div class="container">
     <h2 id="adminTrigger">KOREAN MAMA WRAP</h2>
-    <p id="subtitle" style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ by <b>เชพคับ เชพลืมปิดเตาแก๊ส</b></p>
+    <p id="subtitle" style="text-align:center; margin-bottom: 20px;">มาม่าเกาหลีห่อไข่ โดย <b>cittamama bot</b></p>
 
     <div id="marquee_container" style="display:none; margin-bottom: 15px;">
         <div class="marquee-box">
@@ -179,6 +202,7 @@
         <button type="submit" id="submitBtn">✅ ยืนยันการสั่งอาหารทั้งหมด</button>
         <button type="button" class="btn-contact" onclick="window.location.href='https://www.facebook.com/share/1ZeDBC4aAM/'">💬 ติดต่อสอบถาม/แจ้งปัญหา (Facebook)</button>
         <a href="https://www.wongnai.com/businesses/3412215Is/card" class="gold-button">สมัครสมาชิกสะสมคะแนน</a>
+        <button type="button" id="installBtn" class="install-button">📲 เพิ่มปุ่มเว็บไซต์ไว้ที่หน้าจอของท่าน</button>
     </form>
 </div>
 
@@ -563,6 +587,36 @@
     }
 
     function closeModal() { document.getElementById('paymentModal').style.display = 'none'; location.reload(); }
+
+    // --- Logic สำหรับปุ่มติดตั้งแอป ---
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // ป้องกันไม่ให้เบราว์เซอร์โชว์การแจ้งเตือนติดตั้งอัตโนมัติ
+        e.preventDefault();
+        // เก็บ Event ไว้เรียกใช้ภายหลัง
+        deferredPrompt = e;
+        // โชว์ปุ่มของเรา
+        installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            // เรียกหน้าต่างติดตั้งของเบราว์เซอร์ (Chrome/Android)
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        } else {
+            // กรณี iOS หรือเบราว์เซอร์ที่ไม่รองรับ Web Install API
+            alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone/iPad (iOS):\n1. กดปุ่ม Share (สัญลักษณ์สี่เหลี่ยมลูกศรชี้ขึ้น)\n2. เลือก "Add to Home Screen" (เพิ่มไปยังหน้าจอโฮม)\n\n🤖 Android (Chrome):\n1. กดปุ่มจุดสามจุดที่มุมขวาบน\n2. เลือก "Add to Home Screen" หรือ "Install App"');
+        }
+    });
+
     loadMenu();
 </script>
 </body>
