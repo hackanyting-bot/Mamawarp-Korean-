@@ -16,7 +16,17 @@
             color: #333; 
             margin: 0; 
             padding: 15px;}
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 2px solid #a52a2a; }
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            /* ปรับพื้นหลังให้โปร่งแสง (0.85) และเพิ่มเอฟเฟกต์เบลอ */
+            background: rgba(255, 255, 255, 0.55); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+            border: 2px solid #a52a2a;}
         h2 { text-align: center; color: #a52a2a; margin: 0; text-transform: uppercase; cursor: pointer; user-select: none; -webkit-user-select: none; }
         .menu-item { border-bottom: 1px solid #eee; padding: 12px 0; }
         .price { color: #d32f2f; font-weight: bold; float: right; }
