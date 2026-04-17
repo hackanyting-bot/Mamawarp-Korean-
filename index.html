@@ -2,8 +2,17 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>KOREAN MAMA WRAP - Order System</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="MAMA WRAP">
+    <meta name="apple-mobile-web-app-title" content="MAMA WRAP">
+    <meta name="theme-color" content="#d32f2f">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22KOREAN%20MAMA%20WRAP%22,%22short_name%22:%22MAMA%20WRAP%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%23d32f2f%22}">
+
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -288,8 +297,11 @@
         data.forEach(item => {
             if (!item.stock) return;
             const lbl = document.createElement('label');
-            const onChg = (name === 'main_menu') ? 'onchange="toggleSpecialMenu(this.value === \'มาม่าดอกไม้\')"' : 'onchange="calculateTotal()"';
-            lbl.innerHTML = `<input type="${type}" name="${name}" value="${item.name}" data-price="${item.price}" ${onChg}> ${item.name} <span class="price">${item.price||0}.-</span>`;
+            const onChg = (name === 'main_menu') ? 'onchange="toggleSpecialMenu(true)"' : 'onchange="calculateTotal()"';
+            // ปรับ logic เล็กน้อยให้รองรับค่าที่ส่งมา
+            const isSpec = (name === 'main_menu' && item.name === 'มาม่าดอกไม้');
+            const finalOnChg = (name === 'main_menu') ? `onchange="toggleSpecialMenu(${isSpec})"` : 'onchange="calculateTotal()"';
+            lbl.innerHTML = `<input type="${type}" name="${name}" value="${item.name}" data-price="${item.price}" ${finalOnChg}> ${item.name} <span class="price">${item.price||0}.-</span>`;
             div.appendChild(lbl);
         });
     }
@@ -612,8 +624,8 @@
             }
             deferredPrompt = null;
         } else {
-            // กรณี iOS หรือเบราว์เซอร์ที่ไม่รองรับ Web Install API
-            alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone/iPad (iOS):\n1. กดปุ่ม Share (สัญลักษณ์สี่เหลี่ยมลูกศรชี้ขึ้น)\n2. เลือก "Add to Home Screen" (เพิ่มไปยังหน้าจอโฮม)\n\n🤖 Android (Chrome):\n1. กดปุ่มจุดสามจุดที่มุมขวาบน\n2. เลือก "Add to Home Screen" หรือ "Install App"');
+            // แก้ไขข้อความ Android (Chrome) ให้สั้นลงเพื่อไม่ให้โดนตัด
+            alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone (iOS):\n1. กดปุ่ม Share (สี่เหลี่ยมลูกศรขึ้น)\n2. เลือก "Add to Home Screen"\n\n🤖 Android (Chrome):\n1. กดปุ่มจุด 3 จุดที่มุมขวาบน\n2. เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอโฮม"');
         }
     });
 
