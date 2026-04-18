@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#d32f2f">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="manifest" id="manifest-placeholder">
+    <link rel="manifest" href="manifest.json">
 
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -210,36 +210,46 @@
 <div id="paymentModal"><div class="modal-content"><h2 style="color:#2e7d32;">✅ ส่งออเดอร์แล้ว!</h2><div id="modal_total" style="color:#d32f2f; font-weight:bold; font-size:1.2em; margin:15px 0;"></div><img src="qr-payment.jpg" class="qr-image" alt="QR Payment"><button onclick="closeModal()" style="background:#666; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">กลับไปหน้าหลัก</button></div></div>
 
 <script>
+
     /* =========================
-       ✅ PWA System: Manifest & Service Worker แบบ Inline
+       ✅ PWA System: เรียกใช้จากไฟล์จริง (เสถียร 100%)
     ========================= */
-    const manifestData = {
-        name: "KOREAN MAMA WRAP",
-        short_name: "MAMA WRAP",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#ffffff",
-        theme_color: "#d32f2f"
-    };
-
-    const blobManifest = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blobManifest);
-    document.getElementById('manifest-placeholder').setAttribute('href', manifestURL);
-
     if ('serviceWorker' in navigator) {
-        const swCode = `
-            self.addEventListener('install', e => self.skipWaiting());
-            self.addEventListener('activate', e => self.clients.claim());
-            self.addEventListener('fetch', e => {});
-        `;
-        const swBlob = new Blob([swCode], { type: 'text/javascript' });
-        const swURL = URL.createObjectURL(swBlob);
-
-        navigator.serviceWorker.register(swURL)
-        .then(() => console.log('SW ready'))
-        .catch(err => console.log('SW Error:', err));
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('Service Worker ลงทะเบียนสำเร็จ'))
+            .catch(err => console.log('Service Worker มีปัญหา:', err));
+        });
     }
-    /* ========================= */
+    /* =========================
+       ✅ Logic ติดตั้งแอป 
+    ========================= */
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    // ซ่อนปุ่มติดตั้งทันทีถ้าทำงานแบบ App อยู่แล้ว
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        installBtn.style.display = 'none';
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        } else {
+            alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone (iOS):\n1. กดปุ่ม Share (สี่เหลี่ยมลูกศรขึ้น)\n2. เลือก "Add to Home Screen"\n\n🤖 Android (Chrome):\n1. กดปุ่มจุด 3 จุดที่มุมขวาบน\n2. เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอโฮม"');
+        }
+    });
 
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
@@ -619,39 +629,8 @@
 
     function closeModal() { document.getElementById('paymentModal').style.display = 'none'; location.reload(); }
 
-    /* =========================
-       ✅ Logic ติดตั้งแอป 
-    ========================= */
-    let deferredPrompt;
-    const installBtn = document.getElementById('installBtn');
-
-    // 🟢 ซ่อนปุ่มติดตั้งทันทีถ้าทำงานแบบ App อยู่แล้ว
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-        installBtn.style.display = 'none';
-        console.log("Running as app - Install button hidden.");
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = 'block';
-    });
-
-    installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-                installBtn.style.display = 'none';
-            }
-            deferredPrompt = null;
-        } else {
-            alert('สำหรับการเพิ่มปุ่มไว้หน้าจอ:\n\n📱 iPhone (iOS):\n1. กดปุ่ม Share (สี่เหลี่ยมลูกศรขึ้น)\n2. เลือก "Add to Home Screen"\n\n🤖 Android (Chrome):\n1. กดปุ่มจุด 3 จุดที่มุมขวาบน\n2. เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอโฮม"');
-        }
-    });
-
     loadMenu();
+
 </script>
 </body>
 </html>
