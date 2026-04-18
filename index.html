@@ -13,6 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -217,10 +218,11 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker ลงทะเบียนสำเร็จ'))
-            .catch(err => console.log('Service Worker มีปัญหา:', err));
+            .then(reg => console.log('Service Worker Registered'))
+            .catch(err => console.log('Service Worker Error:', err));
         });
     }
+
     /* =========================
        ✅ Logic ติดตั้งแอป 
     ========================= */
