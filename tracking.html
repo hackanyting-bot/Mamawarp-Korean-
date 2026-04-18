@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8 Maas">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAMA WRAP - Tracking System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #d32f2f;
+            --success-color: #4caf50;
+            --warning-color: #ff5252;
+            --dark-color: #333;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h2 { text-align: center; color: var(--primary-color); margin-bottom: 25px; }
+
+        /* การ์ดออเดอร์ */
+        .order-card {
+            border: 2px solid #eee;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 15px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        .dot-cooking { background: var(--warning-color); box-shadow: 0 0 8px var(--warning-color); }
+        .dot-done { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); }
+
+        .order-info { font-size: 0.9em; color: #666; line-height: 1.6; }
+        .phone-mask { font-family: monospace; letter-spacing: 1px; }
+
+        /* ปุ่ม Admin */
+        .admin-btn-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Kanit';
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-cooking { background: var(--warning-color); }
+        .btn-done { background: var(--success-color); }
+
+        /* โหมดลับ */
+        #adminSection { display: none; margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 20px; }
+        
+        #secretZone {
+            margin-top: 50px;
+            font-size: 0.7em;
+            color: #ccc;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .back-home {
+            margin-top: 20px;
+            text-decoration: none;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="customerSection">
+        <h2 id="mainTitle">📍 ติดตามออเดอร์</h2>
+        <div id="orderList">กำลังดึงข้อมูลออเดอร์...</div>
+    </div>
+
+    <div id="adminSection">
+        <h2 style="color:var(--dark-color)">👨‍🍳 หลังบ้าน (Admin)</h2>
+        <div id="adminOrderList"></div>
+    </div>
+</div>
+
+<a href="index.html" class="back-home">← กลับไปหน้าสั่งอาหาร</a>
+
+<div id="secretZone">MAMA WRAP SYSTEM v1.0</div>
+
+<script>
+    // 1. ตั้งค่า Supabase (ก๊อปปี้จากไฟล์ index.html มาแปะ)
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. ข้อมูลลูกค้า (ดึงจาก localStorage ของเครื่องที่สั่ง)
+    const customerName = localStorage.getItem('customerName') || "";
+
+    // 3. ระบบ Real-time ติดตามออเดอร์
+    async function fetchMyOrders() {
+        const { data: orders, error } = await _supabase
+            .from('orders')
+            .select('*')
+            .eq('customer_name', customerName)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const listDiv = document.getElementById('orderList');
+        if (!orders || orders.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center;'>ยังไม่มีออเดอร์ที่กำลังปรุงในขณะนี้</p>";
+            return;
+        }
+
+        listDiv.innerHTML = orders.map(order => {
+            const isDone = order.status === 'done';
+            const maskedPhone = order.customer_phone ? order.customer_phone.replace(/(\d{3})\d{4}(\d{3})/, '$1-xxxx-$2') : '---';
+            return `
+                <div class="order-card">
+                    <div class="status-header">
+                        <span class="dot ${isDone ? 'dot-done' : 'dot-cooking'}"></span>
+                        <span style="color:${isDone ? 'var(--success-color)' : 'var(--warning-color)'}">
+                            ${isDone ? 'ออเดอร์เสร็จแล้ว!' : 'กำลังทำอาหาร...'}
+                        </span>
+                    </div>
+                    <div class="order-info">
+                        <strong>คุณ:</strong> ${order.customer_name} <span class="phone-mask">(${maskedPhone})</span><br>
+                        <strong>รายการ:</strong> ${order.order_details}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // เปิดระบบ Real-time (ถ้ามีการ update ในตาราง orders ให้รีเฟรชข้อมูลทันที)
+    _supabase
+        .channel('any')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
+            fetchMyOrders();
+            if (document.getElementById('adminSection').style.display === 'block') {
+                renderAdminOrders();
+            }
+        })
+        .subscribe();
+
+    // 4. ระบบกดค้างเข้าโหมด Admin (0420)
+    let pressTimer;
+    const secretZone = document.getElementById('secretZone');
+
+    secretZone.addEventListener('touchstart', () => {
+        pressTimer = setTimeout(() => {
+            const pwd = prompt("ระบุรหัสลับพนักงาน:");
+            if (pwd === "0420") {
+                document.getElementById('customerSection').style.display = 'none';
+                document.getElementById('adminSection').style.display = 'block';
+                renderAdminOrders();
+            }
+        }, 2000);
+    });
+
+    secretZone.addEventListener('touchend', () => clearTimeout(pressTimer));
+    secretZone.addEventListener('mousedown', () => { /* สำหรับคอม */
+        pressTimer = setTimeout(() => {
+            const pwd = prompt("ระบุรหัสลับพนักงาน:");
+            if (pwd === "0420") {
+                document.getElementById('customerSection').style.display = 'none';
+                document.getElementById('adminSection').style.display = 'block';
+                renderAdminOrders();
+            }
+        }, 2000);
+    });
+    secretZone.addEventListener('mouseup', () => clearTimeout(pressTimer));
+
+    // 5. ระบบหลังบ้านสำหรับพนักงาน
+    async function renderAdminOrders() {
+        const { data: orders, error } = await _supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        const adminList = document.getElementById('adminOrderList');
+        adminList.innerHTML = orders.map(order => `
+            <div class="order-card" style="background:#fff">
+                <div class="order-info">
+                    <strong>ลูกค้า: ${order.customer_name}</strong> (${order.customer_phone})<br>
+                    เมนู: ${order.order_details}<br>
+                    สถานะ: <b>${order.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 กำลังทำ'}</b>
+                </div>
+                <div class="admin-btn-group">
+                    <button class="btn btn-cooking" onclick="updateStatus('${order.id}', 'cooking')">กำลังทำ</button>
+                    <button class="btn btn-done" onclick="updateStatus('${order.id}', 'done')">เสร็จแล้ว</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function updateStatus(id, newStatus) {
+        const { error } = await _supabase
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', id);
+        if (error) alert("Error: " + error.message);
+        renderAdminOrders();
+    }
+
+    // เริ่มทำงานเมื่อเปิดหน้า
+    fetchMyOrders();
+</script>
+
+</body>
+</html>
