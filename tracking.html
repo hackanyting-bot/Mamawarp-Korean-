@@ -131,42 +131,61 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. ข้อมูลลูกค้า (ดึงจาก localStorage ของเครื่องที่สั่ง)
-    const customerName = localStorage.getItem('customerName') || "";
+    // 2. ดึงข้อมูลและจัดการชื่อลูกค้าให้สะอาด (ไร้ช่องว่าง)
+    const rawCustomerName = localStorage.getItem('customerName') || "";
+    const customerName = rawCustomerName.trim();
 
     // 3. ระบบ Real-time ติดตามออเดอร์
     async function fetchMyOrders() {
-        const { data: orders, error } = await _supabase
-            .from('orders')
-            .select('*')
-            .eq('customer_name', customerName)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
         const listDiv = document.getElementById('orderList');
-        if (!orders || orders.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center;'>ยังไม่มีออเดอร์ที่กำลังปรุงในขณะนี้</p>";
+
+        // ตรวจสอบเบื้องต้นว่ามีชื่อลูกค้าในระบบเครื่องนี้หรือไม่
+        if (!customerName) {
+            listDiv.innerHTML = "<p style='text-align:center; color: var(--warning-color);'>ไม่พบประวัติการสั่งอาหารในอุปกรณ์นี้<br>กรุณากลับไปหน้าหลักเพื่อสั่งอาหารใหม่ครับ</p>";
             return;
         }
 
-        listDiv.innerHTML = orders.map(order => {
-            const isDone = order.status === 'done';
-            const maskedPhone = order.customer_phone ? order.customer_phone.replace(/(\d{3})\d{4}(\d{3})/, '$1-xxxx-$2') : '---';
-            return `
-                <div class="order-card">
-                    <div class="status-header">
-                        <span class="dot ${isDone ? 'dot-done' : 'dot-cooking'}"></span>
-                        <span style="color:${isDone ? 'var(--success-color)' : 'var(--warning-color)'}">
-                            ${isDone ? 'ออเดอร์เสร็จแล้ว!' : 'กำลังทำอาหาร...'}
-                        </span>
+        try {
+            console.log("กำลังดึงออเดอร์ของ:", customerName);
+            
+            const { data: orders, error } = await _supabase
+                .from('orders')
+                .select('*')
+                .eq('customer_name', customerName)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                console.error("Supabase Error:", error);
+                throw error;
+            }
+
+            if (!orders || orders.length === 0) {
+                listDiv.innerHTML = "<p style='text-align:center;'>ยังไม่มีออเดอร์ที่กำลังปรุงในขณะนี้<br><small style='color:#999;'>(หากเพิ่งกดสั่ง กรุณารอสักครู่)</small></p>";
+                return;
+            }
+
+            listDiv.innerHTML = orders.map(order => {
+                const isDone = order.status === 'done';
+                const maskedPhone = order.customer_phone ? order.customer_phone.replace(/(\d{3})\d{4}(\d{3})/, '$1-xxxx-$2') : '---';
+                return `
+                    <div class="order-card">
+                        <div class="status-header">
+                            <span class="dot ${isDone ? 'dot-done' : 'dot-cooking'}"></span>
+                            <span style="color:${isDone ? 'var(--success-color)' : 'var(--warning-color)'}">
+                                ${isDone ? 'ออเดอร์เสร็จแล้ว!' : 'กำลังทำอาหาร...'}
+                            </span>
+                        </div>
+                        <div class="order-info">
+                            <strong>คุณ:</strong> ${order.customer_name} <span class="phone-mask">(${maskedPhone})</span><br>
+                            <strong>รายการ:</strong> ${order.order_details}
+                        </div>
                     </div>
-                    <div class="order-info">
-                        <strong>คุณ:</strong> ${order.customer_name} <span class="phone-mask">(${maskedPhone})</span><br>
-                        <strong>รายการ:</strong> ${order.order_details}
-                    </div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        } catch (err) {
+            listDiv.innerHTML = "<p style='text-align:center; color: var(--warning-color);'>เกิดข้อผิดพลาดในการดึงข้อมูล<br>กรุณารีเฟรชหน้าจอใหม่อีกครั้ง</p>";
+        }
     }
 
     // เปิดระบบ Real-time (ถ้ามีการ update ในตาราง orders ให้รีเฟรชข้อมูลทันที)
@@ -210,26 +229,33 @@
 
     // 5. ระบบหลังบ้านสำหรับพนักงาน
     async function renderAdminOrders() {
-        const { data: orders, error } = await _supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(20);
+        try {
+            const { data: orders, error } = await _supabase
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(20);
 
-        const adminList = document.getElementById('adminOrderList');
-        adminList.innerHTML = orders.map(order => `
-            <div class="order-card" style="background:#fff">
-                <div class="order-info">
-                    <strong>ลูกค้า: ${order.customer_name}</strong> (${order.customer_phone})<br>
-                    เมนู: ${order.order_details}<br>
-                    สถานะ: <b>${order.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 กำลังทำ'}</b>
+            if (error) throw error;
+
+            const adminList = document.getElementById('adminOrderList');
+            adminList.innerHTML = orders.map(order => `
+                <div class="order-card" style="background:#fff">
+                    <div class="order-info">
+                        <strong>ลูกค้า: ${order.customer_name}</strong> (${order.customer_phone || '-'})<br>
+                        เมนู: ${order.order_details}<br>
+                        สถานะ: <b>${order.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 กำลังทำ'}</b>
+                    </div>
+                    <div class="admin-btn-group">
+                        <button class="btn btn-cooking" onclick="updateStatus('${order.id}', 'cooking')">กำลังทำ</button>
+                        <button class="btn btn-done" onclick="updateStatus('${order.id}', 'done')">เสร็จแล้ว</button>
+                    </div>
                 </div>
-                <div class="admin-btn-group">
-                    <button class="btn btn-cooking" onclick="updateStatus('${order.id}', 'cooking')">กำลังทำ</button>
-                    <button class="btn btn-done" onclick="updateStatus('${order.id}', 'done')">เสร็จแล้ว</button>
-                </div>
-            </div>
-        `).join('');
+            `).join('');
+        } catch (err) {
+            console.error("Admin Fetch Error:", err);
+            alert("เกิดข้อผิดพลาดในการดึงข้อมูลหลังบ้าน");
+        }
     }
 
     async function updateStatus(id, newStatus) {
@@ -237,8 +263,12 @@
             .from('orders')
             .update({ status: newStatus })
             .eq('id', id);
-        if (error) alert("Error: " + error.message);
-        renderAdminOrders();
+        if (error) {
+            alert("Error: " + error.message);
+        } else {
+            // โหลดข้อมูลใหม่หลังจากอัปเดตสถานะสำเร็จ
+            renderAdminOrders();
+        }
     }
 
     // เริ่มทำงานเมื่อเปิดหน้า
