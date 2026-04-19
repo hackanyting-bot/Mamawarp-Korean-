@@ -135,7 +135,7 @@
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v1.4</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v1.5</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -230,35 +230,47 @@
         }
     }
 
-    // อัปเดตสถานะ (ใส่ try-catch เพื่อดักจับ Error กรณีสิทธิ์ฐานข้อมูลมีปัญหา)
+    // อัปเดตสถานะ
     async function updateStatus(id, newStatus) {
         try {
             const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
-            if (error) {
-                alert("เกิดข้อผิดพลาดในการอัปเดต: " + error.message);
-                return;
-            }
+            if (error) throw error;
             refreshOrders();
         } catch(e) {
-            alert("Error: " + e);
+            alert("Error: " + e.message);
         }
     }
 
     // ฟังก์ชันล้างเฉพาะออเดอร์ที่ 'done' แล้ว
     async function clearDoneOrders() {
         if(!confirm('ยืนยันลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
-        const { error } = await _supabase.from('orders').delete().eq('status', 'done');
-        if (error) alert("ลบไม่ได้: " + error.message);
-        refreshOrders();
+        try {
+            const { error } = await _supabase.from('orders').delete().eq('status', 'done');
+            if (error) throw error;
+            refreshOrders();
+        } catch(e) {
+            alert("ลบไม่ได้: " + e.message);
+        }
     }
 
-    // ฟังก์ชันล้างออเดอร์ทั้งหมด (รีเซ็ตคิว)
+    // ฟังก์ชันล้างออเดอร์ทั้งหมด (แก้ไขใหม่: ดึง ID ทั้งหมดมาก่อนแล้วค่อยสั่งลบ ป้องกัน API Block)
     async function clearAllOrders() {
         if(!confirm('⚠️ ยืนยันการ "ล้างออเดอร์ทั้งหมด" ในระบบ? (ลบจริง กู้ไม่ได้นะ)')) return;
-        // ลบทุก record ที่ id ไม่เท่ากับค่าว่างเปล่า (เทคนิคการสั่งลบทั้งหมดของ Supabase)
-        const { error } = await _supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (error) alert("ลบไม่ได้: " + error.message);
-        refreshOrders();
+        try {
+            // 1. ดึง ID ของออเดอร์ทั้งหมดออกมา
+            const { data, error: fetchError } = await _supabase.from('orders').select('id');
+            if (fetchError) throw fetchError;
+            
+            // 2. ถ่ามีข้อมูล ให้สั่งลบตาม ID ที่ดึงมา
+            if (data && data.length > 0) {
+                const ids = data.map(o => o.id);
+                const { error: deleteError } = await _supabase.from('orders').delete().in('id', ids);
+                if (deleteError) throw deleteError;
+            }
+            refreshOrders();
+        } catch(e) {
+            alert("ลบไม่ได้: " + e.message);
+        }
     }
 
     // Real-time Update
