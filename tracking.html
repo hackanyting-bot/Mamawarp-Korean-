@@ -72,7 +72,19 @@
         .order-details { font-size: 1em; color: #333; font-weight: 400; line-height: 1.4; }
 
         /* Admin UI */
-        #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 30px; margin-top: 20px; }
+        #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
+        
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .btn-action {
+            flex: 1; padding: 10px; border: none; border-radius: 8px;
+            font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white;
+            font-size: 0.9em;
+        }
+
         .admin-card {
             background: #fff;
             padding: 15px;
@@ -85,6 +97,7 @@
         .btn {
             flex: 1; padding: 12px; border: none; border-radius: 10px;
             color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer;
+            position: relative; z-index: 10;
         }
         .btn-cooking { background: var(--warning-color); }
         .btn-done { background: var(--success-color); }
@@ -111,12 +124,18 @@
     </div>
 
     <div id="admin-ui">
-        <h2 style="text-align:center; color:#333;">👨‍🍳 ระบบหลังบ้าน</h2>
+        <h2 style="text-align:center; color:#333; margin-bottom: 10px;">👨‍🍳 ระบบหลังบ้าน</h2>
+        
+        <div class="admin-actions">
+            <button class="btn-action" style="background:#ff9800;" onclick="clearDoneOrders()">🧹 ล้างที่เสร็จแล้ว</button>
+            <button class="btn-action" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
+        </div>
+
         <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v1.3</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v1.4</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -136,13 +155,27 @@
 
     async function refreshOrders() {
         const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false });
-        if (error) return;
+        if (error) {
+            console.error(error);
+            return;
+        }
 
-        // 1. กรองออเดอร์ของลูกค้าคนนี้ (เช็คทั้งชื่อและเบอร์)
-        const myOrders = orders.filter(o => 
-            (myName !== "" && o.customer_name === myName) || 
-            (myPhone !== "" && o.customer_phone === myPhone)
-        ).slice(0, 5);
+        const now = new Date().getTime();
+
+        // 1. กรองออเดอร์ของลูกค้าคนนี้
+        const myOrders = orders.filter(o => {
+            const isMyOrder = (myName !== "" && o.customer_name === myName) || (myPhone !== "" && o.customer_phone === myPhone);
+            if (!isMyOrder) return false;
+
+            // กรองทิ้งถ้าสถานะคือ done และเวลาผ่านไปเกิน 1 ชั่วโมง (3600000 milliseconds)
+            if (o.status === 'done') {
+                const orderTime = new Date(o.created_at).getTime();
+                if (now - orderTime > 3600000) {
+                    return false; // ซ่อนออเดอร์นี้
+                }
+            }
+            return true;
+        }).slice(0, 5);
 
         const listDiv = document.getElementById('order-list');
         
@@ -179,22 +212,52 @@
         // 2. แสดงฝั่ง Admin (ถ้าเปิดอยู่)
         if (document.getElementById('admin-ui').style.display === 'block') {
             const adminList = document.getElementById('admin-order-list');
-            adminList.innerHTML = orders.slice(0, 20).map(o => `
-                <div class="admin-card">
-                    <strong>${o.customer_name}</strong> - ${o.customer_phone || 'ไม่มีเบอร์'}<br>
-                    <small>ประเภท: ${o.delivery_type === 'delivery' ? '🛵 ส่งถึงที่' : '🏠 รับเอง'}</small><br>
-                    <div style="margin-top:5px;">${o.order_details}</div>
-                    <div class="btn-group">
-                        <button class="btn btn-cooking" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
-                        <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">เสร็จแล้ว</button>
+            if(orders.length === 0) {
+                adminList.innerHTML = `<p style="text-align:center; color:#888;">ว่างเปล่า ไม่มีออเดอร์ค้าง</p>`;
+            } else {
+                adminList.innerHTML = orders.slice(0, 50).map(o => `
+                    <div class="admin-card">
+                        <strong>${o.customer_name}</strong> - ${o.customer_phone || 'ไม่มีเบอร์'}<br>
+                        <small>ประเภท: ${o.delivery_type === 'delivery' ? '🛵 ส่งถึงที่' : '🏠 รับเอง'} | สถานะ: ${o.status === 'done' ? '✅' : '👨‍🍳'}</small><br>
+                        <div style="margin-top:5px; margin-bottom:10px;">${o.order_details}</div>
+                        <div class="btn-group">
+                            <button class="btn btn-cooking" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
+                            <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">เสร็จแล้ว</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
     }
 
+    // อัปเดตสถานะ (ใส่ try-catch เพื่อดักจับ Error กรณีสิทธิ์ฐานข้อมูลมีปัญหา)
     async function updateStatus(id, newStatus) {
-        await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
+        try {
+            const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
+            if (error) {
+                alert("เกิดข้อผิดพลาดในการอัปเดต: " + error.message);
+                return;
+            }
+            refreshOrders();
+        } catch(e) {
+            alert("Error: " + e);
+        }
+    }
+
+    // ฟังก์ชันล้างเฉพาะออเดอร์ที่ 'done' แล้ว
+    async function clearDoneOrders() {
+        if(!confirm('ยืนยันลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
+        const { error } = await _supabase.from('orders').delete().eq('status', 'done');
+        if (error) alert("ลบไม่ได้: " + error.message);
+        refreshOrders();
+    }
+
+    // ฟังก์ชันล้างออเดอร์ทั้งหมด (รีเซ็ตคิว)
+    async function clearAllOrders() {
+        if(!confirm('⚠️ ยืนยันการ "ล้างออเดอร์ทั้งหมด" ในระบบ? (ลบจริง กู้ไม่ได้นะ)')) return;
+        // ลบทุก record ที่ id ไม่เท่ากับค่าว่างเปล่า (เทคนิคการสั่งลบทั้งหมดของ Supabase)
+        const { error } = await _supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) alert("ลบไม่ได้: " + error.message);
         refreshOrders();
     }
 
