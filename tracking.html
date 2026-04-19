@@ -126,6 +126,230 @@
 <div id="secretZone">MAMA WRAP SYSTEM v1.0</div>
 
 <script>
+    // 1. ตั้งค่า Supabase
+    const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. ข้อมูลลูกค้า (ดึงจาก localStorage)
+    const customerName = (localStorage.getItem('customerName') || "").trim();
+    const customerPhone = (localStorage.getItem('customerPhone') || "").trim();
+
+    // 3. ระบบ Real-time ติดตามออเดอร์
+    async function fetchMyOrders() {
+        const listDiv = document.getElementById('orderList');
+        
+        if (!customerName) {
+            listDiv.innerHTML = "<p style='text-align:center;'>ไม่พบชื่อลูกค้า กรุณาสั่งอาหารก่อนครับ</p>";
+            return;
+        }
+
+        // ค้นหาออเดอร์โดยใช้ชื่อเป็นหลัก
+        let query = _supabase
+            .from('orders')
+            .select('*')
+            .eq('customer_name', customerName)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const { data: orders, error } = await query;
+
+        if (error) {
+            console.error("Fetch error:", error);
+            listDiv.innerHTML = "<p style='text-align:center; color:red;'>เกิดข้อผิดพลาดในการเชื่อมต่อ</p>";
+            return;
+        }
+
+        if (!orders || orders.length === 0) {
+            listDiv.innerHTML = `<p style='text-align:center;'>ยังไม่มีออเดอร์ของ <b>${customerName}</b> ในขณะนี้</p>`;
+            return;
+        }
+
+        listDiv.innerHTML = orders.map(order => {
+            const isDone = order.status === 'done';
+            const maskedPhone = order.customer_phone ? order.customer_phone.replace(/(\d{3})\d{4}(\d{3})/, '$1-xxxx-$2') : '---';
+            return `
+                <div class="order-card">
+                    <div class="status-header">
+                        <span class="dot ${isDone ? 'dot-done' : 'dot-cooking'}"></span>
+                        <span style="color:${isDone ? 'var(--success-color)' : 'var(--warning-color)'}">
+                            ${isDone ? 'ออเดอร์เสร็จแล้ว!' : 'กำลังทำอาหาร...'}
+                        </span>
+                    </div>
+                    <div class="order-info">
+                        <strong>คุณ:</strong> ${order.customer_name} <span class="phone-mask">(${maskedPhone})</span><br>
+                        <strong>รายการ:</strong> ${order.order_details}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // เปิดระบบ Real-time
+    _supabase
+        .channel('any')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
+            fetchMyOrders();
+            if (document.getElementById('adminSection').style.display === 'block') {
+                renderAdminOrders();
+            }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+            fetchMyOrders();
+        })
+        .subscribe();
+
+    // 4. ระบบกดค้างเข้าโหมด Admin (0420)
+    let pressTimer;
+    const secretZone = document.getElementById('secretZone');
+
+    const enterAdmin = () => {
+        const pwd = prompt("ระบุรหัสลับพนักงาน:");
+        if (pwd === "0420") {
+            document.getElementById('customerSection').style.display = 'none';
+            document.getElementById('adminSection').style.display = 'block';
+            renderAdminOrders();
+        }
+    };
+
+    secretZone.addEventListener('touchstart', () => { pressTimer = setTimeout(enterAdmin, 2000); });
+    secretZone.addEventListener('touchend', () => clearTimeout(pressTimer));
+    secretZone.addEventListener('mousedown', () => { pressTimer = setTimeout(enterAdmin, 2000); });
+    secretZone.addEventListener('mouseup', () => clearTimeout(pressTimer));
+
+    // 5. ระบบหลังบ้านสำหรับพนักงาน
+    async function renderAdminOrders() {
+        const { data: orders, error } = await _supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (error) return;
+
+        const adminList = document.getElementById('adminOrderList');
+        adminList.innerHTML = orders.map(order => `
+            <div class="order-card" style="background:#fff">
+                <div class="order-info">
+                    <strong>ลูกค้า: ${order.customer_name}</strong> (${order.customer_phone || 'ไม่มีเบอร์'})<br>
+                    เมนู: ${order.order_details}<br>
+                    สถานะ: <b>${order.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 กำลังทำ'}</b>
+                </div>
+                <div class="admin-btn-group">
+                    <button class="btn btn-cooking" onclick="updateStatus('${order.id}', 'cooking')">กำลังทำ</button>
+                    <button class="btn btn-done" onclick="updateStatus('${order.id}', 'done')">เสร็จแล้ว</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function updateStatus(id, newStatus) {
+        const { error } = await _supabase
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', id);
+        if (error) alert("Error: " + error.message);
+        renderAdminOrders();
+    }
+
+    // เริ่มทำงานเมื่อเปิดหน้า
+    fetchMyOrders();
+</script>
+
+</body>
+</html>
+
+        /* การ์ดออเดอร์ */
+        .order-card {
+            border: 2px solid #eee;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 15px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        .dot-cooking { background: var(--warning-color); box-shadow: 0 0 8px var(--warning-color); }
+        .dot-done { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); }
+
+        .order-info { font-size: 0.9em; color: #666; line-height: 1.6; }
+        .phone-mask { font-family: monospace; letter-spacing: 1px; }
+
+        /* ปุ่ม Admin */
+        .admin-btn-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Kanit';
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-cooking { background: var(--warning-color); }
+        .btn-done { background: var(--success-color); }
+
+        /* โหมดลับ */
+        #adminSection { display: none; margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 20px; }
+        
+        #secretZone {
+            margin-top: 50px;
+            font-size: 0.7em;
+            color: #ccc;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .back-home {
+            margin-top: 20px;
+            text-decoration: none;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="customerSection">
+        <h2 id="mainTitle">📍 ติดตามออเดอร์</h2>
+        <div id="orderList">กำลังดึงข้อมูลออเดอร์...</div>
+    </div>
+
+    <div id="adminSection">
+        <h2 style="color:var(--dark-color)">👨‍🍳 หลังบ้าน (Admin)</h2>
+        <div id="adminOrderList"></div>
+    </div>
+</div>
+
+<a href="index.html" class="back-home">← กลับไปหน้าสั่งอาหาร</a>
+
+<div id="secretZone">MAMA WRAP SYSTEM v1.0</div>
+
+<script>
     // 1. ตั้งค่า Supabase (ก๊อปปี้จากไฟล์ index.html มาแปะ)
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
