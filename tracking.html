@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MAMA WRAP - Tracking</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,7 +11,8 @@
             --primary-color: #d32f2f;
             --success-color: #4caf50;
             --warning-color: #ff9800;
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f4f4;
+            --card-bg: #ffffff;
         }
 
         body {
@@ -22,24 +23,26 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
 
         .container {
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
         }
 
         .card {
-            background: white;
-            padding: 20px;
+            background: var(--card-bg);
+            padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             text-align: center;
         }
 
-        h2 { color: var(--primary-color); margin-top: 0; }
+        h2 { color: var(--primary-color); margin: 0 0 20px 0; font-size: 1.5em; }
 
+        /* รายการออเดอร์ลูกค้า */
         .order-item {
             background: #fff;
             border: 1px solid #eee;
@@ -47,7 +50,8 @@
             padding: 15px;
             margin-bottom: 15px;
             text-align: left;
-            border-left: 5px solid var(--warning-color);
+            border-left: 6px solid var(--warning-color);
+            transition: transform 0.2s;
         }
 
         .order-item.done {
@@ -57,25 +61,38 @@
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
+            border-radius: 12px;
+            font-size: 0.8em;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .status-cooking { background: #fff3e0; color: #ef6c00; }
         .status-done { background: #e8f5e9; color: #2e7d32; }
 
-        .admin-controls {
+        .order-details { font-size: 0.95em; color: #333; line-height: 1.4; }
+
+        /* ส่วนของ Admin */
+        #admin-ui {
             display: none;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px dashed #ccc;
+            width: 100%;
+            margin-top: 20px;
+            border-top: 2px dashed #bbb;
+            padding-top: 30px;
         }
 
-        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        .admin-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 12px; }
         
-        button {
+        .btn {
             flex: 1;
             padding: 10px;
             border: none;
@@ -84,22 +101,29 @@
             font-family: 'Kanit';
             font-weight: 600;
             color: white;
+            font-size: 0.9em;
         }
 
-        .btn-wait { background: #ff5252; }
-        .btn-finish { background: var(--success-color); }
+        .btn-cooking { background: var(--warning-color); }
+        .btn-done { background: var(--success-color); }
 
         .back-link {
+            display: inline-block;
             text-decoration: none;
-            color: #666;
+            color: #888;
             font-size: 0.9em;
-            margin-top: 15px;
+            margin-top: 10px;
         }
 
+        /* โซนลับเวอร์ชั่น */
         #secret-trigger {
-            margin-top: 50px;
-            opacity: 0.1;
-            font-size: 0.7em;
+            margin-top: 60px;
+            color: #ccc;
+            font-size: 0.75em;
+            padding: 20px;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -108,89 +132,129 @@
 <div class="container">
     <div id="customer-ui" class="card">
         <h2>📍 ติดตามออเดอร์</h2>
-        <div id="order-list">กำลังโหลดข้อมูล...</div>
+        <div id="order-list">กำลังโหลดข้อมูลออเดอร์...</div>
         <a href="index.html" class="back-link">← กลับไปหน้าสั่งอาหาร</a>
     </div>
 
-    <div id="admin-ui" class="admin-controls">
-        <div class="card">
-            <h2>👨‍🍳 หลังบ้าน (Admin)</h2>
-            <div id="admin-order-list"></div>
-        </div>
+    <div id="admin-ui">
+        <h2 style="text-align:center; color:#333;">👨‍🍳 ระบบหลังบ้าน</h2>
+        <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v1.0</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v1.1</div>
 
 <script>
+    // 1. ตั้งค่า Supabase
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // ดึงชื่อลูกค้าจากเครื่อง
     const myName = localStorage.getItem('customerName') || "";
 
+    // 2. ฟังก์ชันดึงข้อมูลและแสดงผล
     async function refreshOrders() {
-        const { data: orders, error } = await _supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const { data: orders, error } = await _supabase
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) return;
+            if (error) throw error;
 
-        // 1. แสดงฝั่งลูกค้า (เฉพาะของตัวเอง)
-        const myOrders = orders.filter(o => o.customer_name === myName).slice(0, 3);
-        const listDiv = document.getElementById('order-list');
-        
-        if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p>ไม่พบออเดอร์ของชื่อ "${myName}"</p>`;
-        } else {
-            listDiv.innerHTML = myOrders.map(o => `
-                <div class="order-item ${o.status === 'done' ? 'done' : ''}">
-                    <span class="status-badge ${o.status === 'done' ? 'status-done' : 'status-cooking'}">
-                        ${o.status === 'done' ? '✅ เสร็จแล้ว' : '👨‍🍳 กำลังปรุง'}
-                    </span>
-                    <div><strong>เมนู:</strong> ${o.order_details}</div>
-                </div>
-            `).join('');
+            // แสดงฝั่งลูกค้า (เฉพาะของตัวเอง)
+            const listDiv = document.getElementById('order-list');
+            const myOrders = orders.filter(o => o.customer_name === myName).slice(0, 5);
+
+            if (myOrders.length === 0) {
+                listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ในชื่อ "${myName}"<br><small>กรุณาสั่งอาหารที่หน้าหลักก่อนครับ</small></p>`;
+            } else {
+                listDiv.innerHTML = myOrders.map(o => `
+                    <div class="order-item ${o.status === 'done' ? 'done' : ''}">
+                        <span class="status-badge ${o.status === 'done' ? 'status-done' : 'status-cooking'}">
+                            ${o.status === 'done' ? '✅ อาหารเสร็จแล้ว' : '👨‍🍳 กำลังเตรียมอาหาร'}
+                        </span>
+                        <div class="order-details">
+                            <strong>รายการ:</strong> ${o.order_details}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // แสดงฝั่ง Admin (ถ้าเปิดโหมดไว้)
+            if (document.getElementById('admin-ui').style.display === 'block') {
+                const adminDiv = document.getElementById('admin-order-list');
+                adminDiv.innerHTML = orders.slice(0, 20).map(o => `
+                    <div class="admin-card">
+                        <strong>ลูกค้า: ${o.customer_name}</strong><br>
+                        <small>${o.order_details}</small>
+                        <div class="btn-group">
+                            <button class="btn btn-cooking" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
+                            <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">เสร็จแล้ว</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (err) {
+            console.error(err);
         }
-
-        // 2. แสดงฝั่ง Admin (ทั้งหมด)
-        const adminDiv = document.getElementById('admin-order-list');
-        adminDiv.innerHTML = orders.slice(0, 10).map(o => `
-            <div class="order-item">
-                <strong>ลูกค้า: ${o.customer_name}</strong><br>
-                <small>${o.order_details}</small>
-                <div class="btn-group">
-                    <button class="btn-wait" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
-                    <button class="btn-finish" onclick="updateStatus('${o.id}', 'done')">เสร็จแล้ว</button>
-                </div>
-            </div>
-        `).join('');
     }
 
+    // 3. ฟังก์ชันอัปเดตสถานะ (Admin)
     async function updateStatus(id, newStatus) {
-        await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
-        refreshOrders();
+        const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
+        if (!error) refreshOrders();
     }
 
-    // Real-time Subscribe
-    _supabase.channel('custom-all-channel')
+    // 4. ระบบ Real-time
+    _supabase.channel('orders-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         refreshOrders();
     }).subscribe();
 
-    // Secret Admin Mode (กดค้างที่เวอร์ชั่นด้านล่าง)
+    // 5. โลจิกกดค้าง (0420) - รองรับทั้ง PC และ Mobile
     let timer;
-    document.getElementById('secret-trigger').addEventListener('mousedown', () => {
-        timer = setTimeout(() => {
-            if(prompt("รหัสผ่าน:") === "0420") {
-                document.getElementById('admin-ui').style.display = 'block';
-                window.scrollTo(0, document.body.scrollHeight);
-            }
-        }, 2000);
-    });
-    document.getElementById('secret-trigger').addEventListener('mouseup', () => clearTimeout(timer));
+    const secretTrigger = document.getElementById('secret-trigger');
 
+    function startTimer(e) {
+        // ป้องกันการเปิด context menu บนมือถือ
+        if (e.type === 'touchstart') {
+            // ปล่อยให้ scroll ได้ แต่ถ้ากดนิ่งๆ จะเริ่มนับ
+            timer = setTimeout(openAdmin, 2000);
+        } else {
+            timer = setTimeout(openAdmin, 2000);
+        }
+    }
+
+    function cancelTimer() {
+        clearTimeout(timer);
+    }
+
+    function openAdmin() {
+        const pwd = prompt("ระบุรหัสพนักงาน:");
+        if (pwd === "0420") {
+            document.getElementById('admin-ui').style.display = 'block';
+            refreshOrders();
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        } else if (pwd !== null) {
+            alert("รหัสไม่ถูกต้อง");
+        }
+    }
+
+    // เหตุการณ์สำหรับคอมพิวเตอร์
+    secretTrigger.addEventListener('mousedown', startTimer);
+    secretTrigger.addEventListener('mouseup', cancelTimer);
+    secretTrigger.addEventListener('mouseleave', cancelTimer);
+
+    // เหตุการณ์สำหรับมือถือ
+    secretTrigger.addEventListener('touchstart', (e) => {
+        // ไม่ใช้ preventDefault เพื่อให้ยังกดตกลงใน prompt ได้ปกติ
+        startTimer(e);
+    });
+    secretTrigger.addEventListener('touchend', cancelTimer);
+
+    // เริ่มโหลดข้อมูล
     refreshOrders();
 </script>
 
