@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAMA WRAP - Tracking</title>
+    <title>MAMA WRAP - Tracking & Monitor</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -37,9 +37,39 @@
             text-align: center;
         }
 
-        h2 { color: var(--primary-color); margin-bottom: 20px; }
+        h2 { color: var(--primary-color); margin-bottom: 20px; font-size: 1.5em; }
 
-        /* รายการออเดอร์ลูกค้า */
+        /* มอนิเตอร์คิวรวม */
+        .queue-monitor {
+            background: #fff3e0;
+            border: 2px solid #ffcc80;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .queue-header {
+            font-size: 1.2em;
+            color: #d32f2f;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 2px dashed #ffcc80;
+            padding-bottom: 10px;
+        }
+        .queue-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 5px;
+            border-bottom: 1px solid #ffe0b2;
+            font-size: 0.95em;
+        }
+        .queue-row:last-child { border-bottom: none; }
+        .q-number { font-weight: bold; color: #333; }
+        .q-status-cooking { color: var(--warning-color); font-weight: bold; }
+        .q-status-done { color: var(--success-color); font-weight: bold; }
+
+        /* รายการออเดอร์ของฉัน */
         .order-item {
             background: #fff;
             border: 1px solid #eee;
@@ -50,8 +80,6 @@
             border-left: 8px solid var(--warning-color);
             position: relative;
         }
-
-        /* สีตามสถานะ */
         .order-item.status-done { border-left-color: var(--success-color); }
         .order-item.status-delivery { border-left-color: var(--delivery-color); }
 
@@ -63,7 +91,6 @@
             font-weight: 600;
             margin-bottom: 10px;
         }
-
         .badge-cooking { background: #fff3e0; color: var(--warning-color); }
         .badge-done { background: #e8f5e9; color: var(--success-color); }
         .badge-out { background: #e1f5fe; color: var(--delivery-color); }
@@ -74,11 +101,7 @@
         /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
         
-        .admin-actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-action {
             flex: 1; padding: 10px; border: none; border-radius: 8px;
             font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white;
@@ -86,39 +109,44 @@
         }
 
         .admin-card {
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
+            background: #fff; padding: 15px; border-radius: 12px;
+            margin-bottom: 10px; border: 1px solid #ddd; text-align: left;
         }
         .btn-group { display: flex; gap: 8px; margin-top: 10px; }
         .btn {
             flex: 1; padding: 12px; border: none; border-radius: 10px;
             color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer;
-            position: relative; z-index: 10;
         }
         .btn-cooking { background: var(--warning-color); }
         .btn-done { background: var(--success-color); }
 
-        .back-link { text-decoration: none; color: #888; font-size: 0.9em; margin-top: 15px; display: block; }
+        .back-link { 
+            text-decoration: none; color: white; background: #333; 
+            padding: 12px; border-radius: 10px; display: block; 
+            margin-top: 15px; font-weight: bold; text-align: center;
+        }
 
         #secret-trigger {
-            margin-top: 60px;
-            color: #ddd;
-            font-size: 0.7em;
-            padding: 20px;
-            user-select: none;
-            -webkit-user-select: none;
+            margin-top: 60px; color: #ddd; font-size: 0.7em;
+            padding: 20px; user-select: none; -webkit-user-select: none;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="queue-monitor">
+        <div class="queue-header">
+            📊 คิวหน้าร้านตอนนี้<br>
+            <span style="font-size: 0.8em; color: #555;">(รอคิวอยู่: <span id="queue-count">0</span> คิว)</span>
+        </div>
+        <div id="public-queue-list">
+            <div style="text-align:center; color:#888; padding: 10px;">กำลังโหลดคิว...</div>
+        </div>
+    </div>
+
     <div id="customer-ui" class="card">
-        <h2>📍 ติดตามออเดอร์</h2>
+        <h2>📍 ออเดอร์ของฉัน</h2>
         <div id="order-list">กำลังตรวจสอบออเดอร์ของคุณ...</div>
         <a href="index.html" class="back-link">← กลับไปหน้าสั่งอาหาร</a>
     </div>
@@ -135,18 +163,23 @@
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v1.5</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v1.6</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ดึงข้อมูลลูกค้าจาก LocalStorage
     const myName = localStorage.getItem('customerName') || "";
     const myPhone = localStorage.getItem('customerPhone') || "";
 
-    // ฟังก์ชันช่วยเซ็นเซอร์เบอร์โทร
+    // ปิดบังชื่อลูกค้าในคิวรวมเพื่อความส่วนตัว
+    function maskName(name) {
+        if(!name) return "ลูกค้า";
+        if(name.length <= 2) return name + "***";
+        return name.substring(0, 2) + "***";
+    }
+
     function maskPhone(phone) {
         if(!phone) return "---";
         if(phone.length < 10) return phone;
@@ -154,33 +187,57 @@
     }
 
     async function refreshOrders() {
-        const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: false });
-        if (error) {
-            console.error(error);
-            return;
-        }
+        // ดึงข้อมูลเรียงตามเวลาเก่าไปใหม่ (คิวแรกอยู่บนสุด)
+        const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: true });
+        if (error) { console.error(error); return; }
 
         const now = new Date().getTime();
 
-        // 1. กรองออเดอร์ของลูกค้าคนนี้
-        const myOrders = orders.filter(o => {
-            const isMyOrder = (myName !== "" && o.customer_name === myName) || (myPhone !== "" && o.customer_phone === myPhone);
-            if (!isMyOrder) return false;
-
-            // กรองทิ้งถ้าสถานะคือ done และเวลาผ่านไปเกิน 1 ชั่วโมง (3600000 milliseconds)
+        // กรองออเดอร์ที่ยังแอคทีฟ (ถ้าเสร็จแล้วเกิน 1 ชม. ให้ซ่อน)
+        const activeOrders = orders.filter(o => {
             if (o.status === 'done') {
                 const orderTime = new Date(o.created_at).getTime();
-                if (now - orderTime > 3600000) {
-                    return false; // ซ่อนออเดอร์นี้
-                }
+                if (now - orderTime > 3600000) return false;
             }
             return true;
-        }).slice(0, 5);
+        });
+
+        // ----------------------------------------------------
+        // 1. จัดการจอมอนิเตอร์คิวรวม (Public Queue)
+        // ----------------------------------------------------
+        let cookingCount = 0;
+        let queueHTML = "";
+
+        if (activeOrders.length === 0) {
+            queueHTML = '<div style="text-align:center; color:#999; padding:10px;">ตอนนี้คิวว่าง ลุยสั่งได้เลยจ้า!</div>';
+        } else {
+            activeOrders.forEach((o, index) => {
+                if (o.status === 'cooking') cookingCount++;
+                
+                const statusIcon = o.status === 'done' ? '✅ เสร็จแล้ว' : '👨‍🍳 กำลังทำ';
+                const statusClass = o.status === 'done' ? 'q-status-done' : 'q-status-cooking';
+                
+                queueHTML += `
+                    <div class="queue-row">
+                        <div class="q-number">คิวที่ ${index + 1} - คุณ ${maskName(o.customer_name)}</div>
+                        <div class="${statusClass}">${statusIcon}</div>
+                    </div>
+                `;
+            });
+        }
+        document.getElementById('queue-count').innerText = cookingCount;
+        document.getElementById('public-queue-list').innerHTML = queueHTML;
+
+        // ----------------------------------------------------
+        // 2. จัดการรายการออเดอร์ของฉัน (My Orders)
+        // ----------------------------------------------------
+        // เอาออเดอร์ที่แอคทีฟมาเรียงกลับด้าน เพื่อให้บิลล่าสุดของฉันอยู่บนสุด
+        const myOrders = activeOrders.filter(o => (myName !== "" && o.customer_name === myName) || (myPhone !== "" && o.customer_phone === myPhone)).reverse();
 
         const listDiv = document.getElementById('order-list');
         
         if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุดของคุณ<br><small>กรุณาสั่งอาหารก่อนนะครับ</small></p>`;
+            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ของคุณ<br><small>กรุณาสั่งอาหารก่อนนะครับ</small></p>`;
         } else {
             listDiv.innerHTML = myOrders.map(o => {
                 let statusText = "👨‍🍳 กำลังเตรียมอาหาร";
@@ -188,7 +245,7 @@
                 let itemClass = "";
 
                 if (o.status === 'done') {
-                    if (o.delivery_type === 'delivery') {
+                    if (o.delivery_type && o.delivery_type.includes('ส่ง')) {
                         statusText = "🛵 กำลังออกไปส่ง";
                         statusClass = "badge-out";
                         itemClass = "status-delivery";
@@ -209,16 +266,21 @@
             }).join('');
         }
 
-        // 2. แสดงฝั่ง Admin (ถ้าเปิดอยู่)
+        // ----------------------------------------------------
+        // 3. จัดการฝั่ง Admin (ถ้าเปิดใช้งาน)
+        // ----------------------------------------------------
         if (document.getElementById('admin-ui').style.display === 'block') {
             const adminList = document.getElementById('admin-order-list');
-            if(orders.length === 0) {
+            // แอดมินดูแบบเรียงบิลใหม่ล่าสุดอยู่บน
+            const adminOrders = [...activeOrders].reverse();
+
+            if(adminOrders.length === 0) {
                 adminList.innerHTML = `<p style="text-align:center; color:#888;">ว่างเปล่า ไม่มีออเดอร์ค้าง</p>`;
             } else {
-                adminList.innerHTML = orders.slice(0, 50).map(o => `
+                adminList.innerHTML = adminOrders.map(o => `
                     <div class="admin-card">
                         <strong>${o.customer_name}</strong> - ${o.customer_phone || 'ไม่มีเบอร์'}<br>
-                        <small>ประเภท: ${o.delivery_type === 'delivery' ? '🛵 ส่งถึงที่' : '🏠 รับเอง'} | สถานะ: ${o.status === 'done' ? '✅' : '👨‍🍳'}</small><br>
+                        <small>รับของ: ${o.delivery_type || 'ไม่ระบุ'} | สถานะ: ${o.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 ทำอาหาร'}</small><br>
                         <div style="margin-top:5px; margin-bottom:10px;">${o.order_details}</div>
                         <div class="btn-group">
                             <button class="btn btn-cooking" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
@@ -230,67 +292,53 @@
         }
     }
 
-    // อัปเดตสถานะ
     async function updateStatus(id, newStatus) {
         try {
             const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
             if (error) throw error;
             refreshOrders();
-        } catch(e) {
-            alert("Error: " + e.message);
-        }
+        } catch(e) { alert("Error: " + e.message); }
     }
 
-    // ฟังก์ชันล้างเฉพาะออเดอร์ที่ 'done' แล้ว
     async function clearDoneOrders() {
-        if(!confirm('ยืนยันลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
+        if(!confirm('ยืนยันลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม? (คิวจะถูกรีเซ็ตตามบิลที่เหลือ)')) return;
         try {
             const { error } = await _supabase.from('orders').delete().eq('status', 'done');
             if (error) throw error;
             refreshOrders();
-        } catch(e) {
-            alert("ลบไม่ได้: " + e.message);
-        }
+        } catch(e) { alert("ลบไม่ได้: " + e.message); }
     }
 
-    // ฟังก์ชันล้างออเดอร์ทั้งหมด (แก้ไขใหม่: ดึง ID ทั้งหมดมาก่อนแล้วค่อยสั่งลบ ป้องกัน API Block)
     async function clearAllOrders() {
         if(!confirm('⚠️ ยืนยันการ "ล้างออเดอร์ทั้งหมด" ในระบบ? (ลบจริง กู้ไม่ได้นะ)')) return;
         try {
-            // 1. ดึง ID ของออเดอร์ทั้งหมดออกมา
             const { data, error: fetchError } = await _supabase.from('orders').select('id');
             if (fetchError) throw fetchError;
-            
-            // 2. ถ่ามีข้อมูล ให้สั่งลบตาม ID ที่ดึงมา
             if (data && data.length > 0) {
                 const ids = data.map(o => o.id);
                 const { error: deleteError } = await _supabase.from('orders').delete().in('id', ids);
                 if (deleteError) throw deleteError;
             }
             refreshOrders();
-        } catch(e) {
-            alert("ลบไม่ได้: " + e.message);
-        }
+        } catch(e) { alert("ลบไม่ได้: " + e.message); }
     }
 
-    // Real-time Update
+    // Real-time Update ให้คิวเลื่อนทันทีที่ระบบมีการเปลี่ยนแปลง
     _supabase.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
-    // ระบบกดค้าง (0420)
+    // Admin Login (กดค้างที่เวอร์ชั่นด้านล่าง)
     let timer;
     const trigger = document.getElementById('secret-trigger');
 
     function handleStart() {
         timer = setTimeout(() => {
-            const pwd = prompt("ระบุรหัสพนักงาน:");
-            if (pwd === "0420") {
+            if (prompt("ระบุรหัสพนักงาน:") === "0420") {
                 document.getElementById('admin-ui').style.display = 'block';
                 refreshOrders();
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }
         }, 2000);
     }
-
     function handleEnd() { clearTimeout(timer); }
 
     trigger.addEventListener('touchstart', handleStart);
