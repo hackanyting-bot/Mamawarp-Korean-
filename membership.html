@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สะสมแต้ม - มาม่าเกาหลีห่อไข่</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary-color: #d32f2f; --secondary-color: #ffcc00; --bg-color: #fff9e6; }
+        body { font-family: 'Kanit', sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 400px; background: white; padding: 25px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 4px solid var(--secondary-color); text-align: center; }
+        h2 { color: var(--primary-color); margin: 0 0 5px 0; }
+        .subtitle { font-size: 0.9em; color: #666; margin-bottom: 25px; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 2px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 1em; outline: none; }
+        .stamp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 25px 0; background: #fff5d7; padding: 20px; border-radius: 20px; border: 2px dashed var(--primary-color); }
+        .stamp-slot { aspect-ratio: 1/1; background: white; border: 2px solid #ddd; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5em; transition: all 0.3s ease; }
+        .stamp-slot.active { border-color: var(--primary-color); background: var(--secondary-color); transform: scale(1.1); }
+        .stamp-slot.active::after { content: '★'; color: var(--primary-color); font-weight: bold; }
+        .stamp-slot.free-slot { border: 2px solid var(--primary-color); color: var(--primary-color); font-size: 0.7em; font-weight: bold; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--primary-color); color: white; margin-top: 10px; }
+        .btn-primary:disabled { background: #ccc; }
+        #card_section, #admin_loader { display: none; }
+        .status-msg { margin-top: 15px; font-size: 0.9em; color: #2e7d32; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="main_ui">
+        <h2>บัตรสะสมแต้ม</h2>
+        <p class="subtitle">มาม่าเกาหลีห่อไข่ (10 แถม 1)</p>
+
+        <div id="login_section">
+            <input type="text" id="cust_name" placeholder="ชื่อลูกค้า">
+            <input type="tel" id="cust_phone" placeholder="เบอร์โทรศัพท์">
+            <button class="btn-primary" id="login_btn" onclick="handleLogin()">เริ่มสะสมแต้ม</button>
+        </div>
+
+        <div id="card_section">
+            <p>คุณ: <b id="user_display">-</b></p>
+            <div class="stamp-grid" id="stamp_grid">
+                <div class="stamp-slot" id="s1"></div><div class="stamp-slot" id="s2"></div>
+                <div class="stamp-slot" id="s3"></div><div class="stamp-slot" id="s4"></div>
+                <div class="stamp-slot" id="s5"></div><div class="stamp-slot" id="s6"></div>
+                <div class="stamp-slot" id="s7"></div><div class="stamp-slot" id="s8"></div>
+                <div class="stamp-slot" id="s9"></div><div class="stamp-slot free-slot" id="s10">FREE</div>
+            </div>
+            <button id="btn_request" class="btn-primary" onclick="sendStampRequest()">👆 กดขอสะสมแต้ม</button>
+            <p id="status_msg" class="status-msg" style="display:none;">ส่งคำขอแล้ว รอเฮียยืนยันนะ...</p>
+            <button style="background:none; color:#999; font-size:0.8em; margin-top:20px;" onclick="logout()">ออกจากระบบ</button>
+        </div>
+    </div>
+
+    <div id="admin_loader">
+        <h2 style="color: #2e7d32;">กำลังยืนยันแต้ม...</h2>
+        <p>กรุณารอสักครู่ ระบบกำลังเพิ่มแต้มให้ลูกค้า</p>
+    </div>
+</div>
+
+<script>
+    // --- แก้ไข API Key ให้ถูกต้องแล้ว ---
+    const SB_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
+    const _sb = supabase.createClient(SB_URL, SB_KEY);
+
+    const TG_TOKEN = '7795027949:AAGsiPU4FFfoZuXKoDXLqgXlEqmBeEKwnuA';
+    const ADMIN_CHAT_ID = '7006062970';
+    const GROUP_CHAT_ID = '-1003862093556';
+
+    let currentCustomer = null;
+
+    // 1. ฟังก์ชันยืนยันแต้ม (สำหรับเฮียบารมีกดยืนยันจาก Telegram)
+    async function checkApprovalURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const approvePhone = urlParams.get('approve');
+        if (approvePhone) {
+            document.getElementById('main_ui').style.display = 'none';
+            document.getElementById('admin_loader').style.display = 'block';
+            
+            try {
+                // ดึงข้อมูลล่าสุด
+                const { data: user, error: fetchErr } = await _sb.from('point_membership').select('*').eq('phone', approvePhone).single();
+                if (fetchErr || !user) throw new Error('ไม่พบข้อมูลลูกค้า');
+
+                // เพิ่มแต้ม
+                const newPoints = (user.points || 0) + 1;
+                const { error: updErr } = await _sb.from('point_membership').update({ points: newPoints }).eq('phone', approvePhone);
+                if (updErr) throw updErr;
+
+                alert(`✅ ยืนยันแต้มให้คุณ ${user.customer_name} สำเร็จ!\nแต้มเดิม: ${user.points} -> แต้มใหม่: ${newPoints}`);
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
+            }
+            window.location.href = window.location.origin + window.location.pathname; 
+        }
+    }
+
+    // 2. เข้าสู่ระบบ / ลงทะเบียน
+    async function handleLogin() {
+        const name = document.getElementById('cust_name').value;
+        const phone = document.getElementById('cust_phone').value;
+        if(!name || !phone) return alert('กรอกข้อมูลให้ครบครับ');
+        
+        const btn = document.getElementById('login_btn');
+        btn.disabled = true; btn.innerText = 'กำลังโหลด...';
+
+        try {
+            const { data, error } = await _sb.from('point_membership').select('*').eq('phone', phone).maybeSingle();
+            if (data) {
+                currentCustomer = data;
+            } else {
+                const { data: newUser, error: insErr } = await _sb.from('point_membership').insert([{ customer_name: name, phone: phone, points: 0 }]).select().single();
+                if (insErr) throw insErr;
+                currentCustomer = newUser;
+            }
+            localStorage.setItem('mama_member_phone', phone);
+            renderCard();
+        } catch (err) {
+            alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+        } finally {
+            btn.disabled = false; btn.innerText = 'เริ่มสะสมแต้ม';
+        }
+    }
+
+    // 3. แสดงหน้าบัตร
+    function renderCard() {
+        if(!currentCustomer) return;
+        document.getElementById('login_section').style.display = 'none';
+        document.getElementById('card_section').style.display = 'block';
+        document.getElementById('user_display').innerText = currentCustomer.customer_name;
+        
+        for(let i=1; i<=10; i++) {
+            const slot = document.getElementById('s'+i);
+            if(i <= currentCustomer.points) slot.classList.add('active');
+            else slot.classList.remove('active');
+        }
+    }
+
+    // 4. ส่งขอแต้มเข้า Telegram
+    async function sendStampRequest() {
+        const btn = document.getElementById('btn_request');
+        btn.disabled = true; btn.innerText = 'ส่งคำขอแล้ว...';
+
+        // สร้างลิงก์ที่เอาไว้ให้เฮียกด
+        const currentURL = window.location.href.split('?')[0];
+        const approveLink = `${currentURL}?approve=${currentCustomer.phone}`;
+        
+        const msg = `⭐ ขอแต้มหน่อยจ้า!\n👤 ลูกค้า: ${currentCustomer.customer_name}\n📞 เบอร์: ${currentCustomer.phone}\nแต้มปัจจุบัน: ${currentCustomer.points}\n\n👉 กดอนุมัติที่นี่:\n${approveLink}`;
+
+        try {
+            const sendTG = (id) => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ chat_id: id, text: msg })
+            });
+            await Promise.all([sendTG(ADMIN_CHAT_ID), sendTG(GROUP_CHAT_ID)]);
+            document.getElementById('status_msg').style.display = 'block';
+        } catch (err) {
+            alert('ส่งคำขอไม่สำเร็จ');
+            btn.disabled = false; btn.innerText = '👆 กดขอสะสมแต้ม';
+        }
+    }
+
+    async function init() {
+        await checkApprovalURL();
+        const savedPhone = localStorage.getItem('mama_member_phone');
+        if(savedPhone) {
+            const { data } = await _sb.from('point_membership').select('*').eq('phone', savedPhone).maybeSingle();
+            if(data) { currentCustomer = data; renderCard(); }
+        }
+    }
+
+    function logout() { localStorage.clear(); location.reload(); }
+    window.onload = init;
+</script>
+</body>
+</html>

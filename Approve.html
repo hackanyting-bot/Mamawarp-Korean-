@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบอนุมัติแต้ม - มาม่าเกาหลีห่อไข่</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary-color: #d32f2f; --secondary-color: #ffcc00; --bg-color: #fff9e6; }
+        body { font-family: 'Kanit', sans-serif; background-color: var(--bg-color); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 90%; max-width: 400px; background: white; padding: 30px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 4px solid var(--primary-color); text-align: center; }
+        .icon { font-size: 50px; margin-bottom: 20px; }
+        h2 { color: var(--primary-color); margin-bottom: 10px; }
+        .info-box { background: #fdf5d7; padding: 15px; border-radius: 15px; margin: 20px 0; border: 1px solid #ffcc00; text-align: left; }
+        .btn-confirm { background: #2e7d32; color: white; border: none; padding: 18px; width: 100%; border-radius: 15px; font-size: 1.2em; font-weight: bold; cursor: pointer; }
+        .btn-confirm:disabled { background: #ccc; }
+        #status_msg { margin-top: 15px; font-weight: bold; color: #d32f2f; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; margin-right: 10px; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="icon">🍳</div>
+    <h2>ยืนยันการให้แต้ม</h2>
+    
+    <div id="loading_ui">
+        <div class="loader"></div> กำลังดึงข้อมูลลูกค้า...
+    </div>
+
+    <div id="approval_ui" style="display:none;">
+        <div class="info-box">
+            <p>👤 <b>ชื่อ:</b> <span id="display_name"></span></p>
+            <p>📞 <b>เบอร์:</b> <span id="display_phone"></span></p>
+            <p>⭐ <b>แต้มเดิม:</b> <span id="display_points"></span></p>
+        </div>
+        <button id="confirm_btn" class="btn-confirm" onclick="confirmPoints()">ยืนยันเพิ่ม 1 แต้ม ✅</button>
+        <p id="status_msg"></p>
+    </div>
+</div>
+
+<script>
+    const SB_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
+    const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
+    const _sb = supabase.createClient(SB_URL, SB_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const phone = urlParams.get('approve');
+
+    async function loadCustomer() {
+        if (!phone) {
+            document.body.innerHTML = "<h1>❌ ลิงก์ไม่ถูกต้อง</h1>";
+            return;
+        }
+
+        try {
+            const { data, error } = await _sb.from('point_membership').select('*').eq('phone', phone).single();
+            if (error || !data) throw new Error('ไม่พบข้อมูลลูกค้าคนนี้');
+
+            document.getElementById('display_name').innerText = data.customer_name;
+            document.getElementById('display_phone').innerText = data.phone;
+            document.getElementById('display_points').innerText = data.points;
+            
+            document.getElementById('loading_ui').style.display = 'none';
+            document.getElementById('approval_ui').style.display = 'block';
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    async function confirmPoints() {
+        const btn = document.getElementById('confirm_btn');
+        btn.disabled = true;
+        btn.innerText = "กำลังประมวลผล...";
+
+        try {
+            // ดึงค่าล่าสุดอีกครั้งเพื่อความชัวร์
+            const { data: user } = await _sb.from('point_membership').select('points').eq('phone', phone).single();
+            const newPoints = (user.points || 0) + 1;
+
+            const { error: updErr } = await _sb.from('point_membership').update({ points: newPoints }).eq('phone', phone);
+            if (updErr) throw updErr;
+
+            document.getElementById('status_msg').innerHTML = "✅ เรียบร้อย! เพิ่มแต้มเป็น " + newPoints + " แล้ว";
+            btn.style.display = 'none';
+            
+            // รอ 3 วิแล้วปิดหน้านี้เอง
+            setTimeout(() => { window.close(); }, 3000);
+        } catch (err) {
+            alert("ผิดพลาด: " + err.message);
+            btn.disabled = false;
+        }
+    }
+
+    window.onload = loadCustomer;
+</script>
+</body>
+</html>
