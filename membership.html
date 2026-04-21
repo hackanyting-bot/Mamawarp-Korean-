@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สะสมแต้ม - มาม่าเกาหลีห่อไข่</title>
+    <title>บัตรสะสมแต้ม - มาม่าเกาหลีห่อไข่</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -21,7 +21,7 @@
         button { width: 100%; padding: 15px; border: none; border-radius: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: var(--primary-color); color: white; margin-top: 10px; }
         .btn-primary:disabled { background: #ccc; }
-        #card_section, #admin_loader { display: none; }
+        #card_section { display: none; }
         .status-msg { margin-top: 15px; font-size: 0.9em; color: #2e7d32; font-weight: bold; }
     </style>
 </head>
@@ -52,15 +52,10 @@
             <button style="background:none; color:#999; font-size:0.8em; margin-top:20px;" onclick="logout()">ออกจากระบบ</button>
         </div>
     </div>
-
-    <div id="admin_loader">
-        <h2 style="color: #2e7d32;">กำลังยืนยันแต้ม...</h2>
-        <p>กรุณารอสักครู่ ระบบกำลังเพิ่มแต้มให้ลูกค้า</p>
-    </div>
 </div>
 
 <script>
-    // --- แก้ไข API Key ให้ถูกต้องแล้ว ---
+    // การตั้งค่า API (ใช้ตัวที่บารมีส่งให้ล่าสุด)
     const SB_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _sb = supabase.createClient(SB_URL, SB_KEY);
@@ -71,40 +66,14 @@
 
     let currentCustomer = null;
 
-    // 1. ฟังก์ชันยืนยันแต้ม (สำหรับเฮียบารมีกดยืนยันจาก Telegram)
-    async function checkApprovalURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const approvePhone = urlParams.get('approve');
-        if (approvePhone) {
-            document.getElementById('main_ui').style.display = 'none';
-            document.getElementById('admin_loader').style.display = 'block';
-            
-            try {
-                // ดึงข้อมูลล่าสุด
-                const { data: user, error: fetchErr } = await _sb.from('point_membership').select('*').eq('phone', approvePhone).single();
-                if (fetchErr || !user) throw new Error('ไม่พบข้อมูลลูกค้า');
-
-                // เพิ่มแต้ม
-                const newPoints = (user.points || 0) + 1;
-                const { error: updErr } = await _sb.from('point_membership').update({ points: newPoints }).eq('phone', approvePhone);
-                if (updErr) throw updErr;
-
-                alert(`✅ ยืนยันแต้มให้คุณ ${user.customer_name} สำเร็จ!\nแต้มเดิม: ${user.points} -> แต้มใหม่: ${newPoints}`);
-            } catch (err) {
-                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
-            }
-            window.location.href = window.location.origin + window.location.pathname; 
-        }
-    }
-
-    // 2. เข้าสู่ระบบ / ลงทะเบียน
+    // 1. เข้าสู่ระบบ / ลงทะเบียน
     async function handleLogin() {
         const name = document.getElementById('cust_name').value;
         const phone = document.getElementById('cust_phone').value;
-        if(!name || !phone) return alert('กรอกข้อมูลให้ครบครับ');
+        if(!name || !phone) return alert('กรุณากรอกข้อมูลให้ครบครับ');
         
         const btn = document.getElementById('login_btn');
-        btn.disabled = true; btn.innerText = 'กำลังโหลด...';
+        btn.disabled = true; btn.innerText = 'กำลังตรวจสอบ...';
 
         try {
             const { data, error } = await _sb.from('point_membership').select('*').eq('phone', phone).maybeSingle();
@@ -118,13 +87,13 @@
             localStorage.setItem('mama_member_phone', phone);
             renderCard();
         } catch (err) {
-            alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+            alert('เกิดข้อผิดพลาด: ' + err.message);
         } finally {
             btn.disabled = false; btn.innerText = 'เริ่มสะสมแต้ม';
         }
     }
 
-    // 3. แสดงหน้าบัตร
+    // 2. แสดงผลหน้าบัตร
     function renderCard() {
         if(!currentCustomer) return;
         document.getElementById('login_section').style.display = 'none';
@@ -133,21 +102,21 @@
         
         for(let i=1; i<=10; i++) {
             const slot = document.getElementById('s'+i);
-            if(i <= currentCustomer.points) slot.classList.add('active');
+            if(i <= (currentCustomer.points || 0)) slot.classList.add('active');
             else slot.classList.remove('active');
         }
     }
 
-    // 4. ส่งขอแต้มเข้า Telegram
+    // 3. ส่งคำขอสะสมแต้ม (ยิงเข้า Telegram)
     async function sendStampRequest() {
         const btn = document.getElementById('btn_request');
         btn.disabled = true; btn.innerText = 'ส่งคำขอแล้ว...';
 
-        // สร้างลิงก์ที่เอาไว้ให้เฮียกด
-        const currentURL = window.location.href.split('?')[0];
-        const approveLink = `${currentURL}?approve=${currentCustomer.phone}`;
+        // สร้างลิงก์ที่ชี้ไปยังไฟล์ approve.html ในโฟลเดอร์เดียวกัน
+        const baseURL = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
+        const approveLink = `${baseURL}approve.html?approve=${currentCustomer.phone}`;
         
-        const msg = `⭐ ขอแต้มหน่อยจ้า!\n👤 ลูกค้า: ${currentCustomer.customer_name}\n📞 เบอร์: ${currentCustomer.phone}\nแต้มปัจจุบัน: ${currentCustomer.points}\n\n👉 กดอนุมัติที่นี่:\n${approveLink}`;
+        const msg = `⭐ มีคนขอแต้ม "มาม่าเกาหลีห่อไข่"!\n👤 ลูกค้า: ${currentCustomer.customer_name}\n📞 เบอร์: ${currentCustomer.phone}\nแต้มปัจจุบัน: ${currentCustomer.points}\n\n👉 กดที่ลิงก์ด้านล่างเพื่อยืนยันให้แต้ม:\n${approveLink}`;
 
         try {
             const sendTG = (id) => fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
@@ -158,13 +127,12 @@
             await Promise.all([sendTG(ADMIN_CHAT_ID), sendTG(GROUP_CHAT_ID)]);
             document.getElementById('status_msg').style.display = 'block';
         } catch (err) {
-            alert('ส่งคำขอไม่สำเร็จ');
+            alert('ส่งคำขอไม่สำเร็จ กรุณาลองใหม่ครับ');
             btn.disabled = false; btn.innerText = '👆 กดขอสะสมแต้ม';
         }
     }
 
     async function init() {
-        await checkApprovalURL();
         const savedPhone = localStorage.getItem('mama_member_phone');
         if(savedPhone) {
             const { data } = await _sb.from('point_membership').select('*').eq('phone', savedPhone).maybeSingle();
