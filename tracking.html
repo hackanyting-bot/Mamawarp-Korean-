@@ -260,31 +260,11 @@
         refreshOrders();
     }
 
-    // ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอผ่าน OneSignal
+    // 🟢 ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอ (เวอร์ชันนินจา ทะลวง CORS ผ่าน Supabase)
     async function triggerPushNotification(title, message) {
-        const appId = "df78d0a1-1073-4072-b6d4-dd65f1842dc4";
-        const restKey = "os_v2_app_354nbiiqonahfnwu3vs7dbbnyq63ldn4vkoecyvbxc4jluzkzqokuj5hw26gumvccerbhxuaem5kjich5tsftvukzj4ys3arxywyb7i";
-
-        const payload = {
-            app_id: appId,
-            included_segments: ["All"], 
-            headings: { en: title },
-            contents: { en: message },
-            url: window.location.href,
-            // บังคับให้ Push ไม่หมดอายุเร็วเกินไป และปลุกมือถือ
-            priority: 10, 
-            ttl: 3600
-        };
-
         try {
-            await fetch("https://onesignal.com/api/v1/notifications", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Basic ${restKey}`
-                },
-                body: JSON.stringify(payload)
-            });
+            // โยนข้อความเข้าตาราง push_queue เดี๋ยวฐานข้อมูล Supabase จะรับจบยิง OneSignal ให้เอง!
+            await _supabase.from('push_queue').insert([{ title: title, message: message }]);
         } catch(e) {
             console.log("Push Error:", e);
         }
