@@ -6,6 +6,26 @@
     <title>MAMA WRAP - Tracking & Monitor</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "df78d0a1-1073-4072-b6d4-dd65f1842dc4",
+          serviceWorkerPath: "sw.js", // ชี้ไปที่ไฟล์ sw.js ของเรา
+          notifyButton: {
+            enable: true, // เปิดปุ่มกระดิ่งให้ลูกค้ากดรับการแจ้งเตือน
+            displayPredicate: () => true,
+            colors: {
+                'circle.background': '#d32f2f',
+                'circle.foreground': 'white',
+            }
+          },
+        });
+      });
+    </script>
+
     <style>
         :root {
             --primary-color: #d32f2f;
@@ -153,17 +173,6 @@
 <div id="secret-trigger">MAMA WRAP SYSTEM v2.8</div>
 
 <script>
-    // ลงทะเบียน Service Worker สำหรับ PWA
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').then((registration) => {
-                console.log('ServiceWorker ทำงานเรียบร้อย');
-            }).catch((err) => {
-                console.log('ServiceWorker ติดตั้งไม่สำเร็จ: ', err);
-            });
-        });
-    }
-
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -231,6 +240,33 @@
         if(!name) return "ลูกค้า";
         if(name.length <= 2) return name + "***";
         return name.substring(0, 2) + "***";
+    }
+
+    // 🟢 ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอผ่าน OneSignal
+    async function triggerPushNotification(title, message) {
+        const appId = "df78d0a1-1073-4072-b6d4-dd65f1842dc4";
+        const restKey = "os_v2_app_354nbiiqonahfnwu3vs7dbbnyq63ldn4vkoecyvbxc4jluzkzqokuj5hw26gumvccerbhxuaem5kjich5tsftvukzj4ys3arxywyb7i";
+
+        const payload = {
+            app_id: appId,
+            included_segments: ["All"], // แจ้งเตือนทุกคนที่กดรับกระดิ่ง
+            headings: { en: title },
+            contents: { en: message },
+            url: window.location.href
+        };
+
+        try {
+            await fetch("https://onesignal.com/api/v1/notifications", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Basic ${restKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+        } catch(e) {
+            console.log("Push Error:", e);
+        }
     }
 
     // ฟังก์ชันช่วยดึงข้อความล่าสุดแบบปลอดภัย 100% ไม่พังตอนค่าว่าง
@@ -345,7 +381,7 @@
                             ${chatHTML}
                         </div>
                         <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
-                        <button class="btn-send-chat" onclick="sendReply('${o.id}')">ส่งข้อความตอบกลับ</button>
+                        <button class="btn-send-chat" onclick="sendReply('${o.id}', '${o.customer_name}')">ส่งข้อความตอบกลับ</button>
                     </div>
                 `;
             }).join('');
@@ -409,6 +445,10 @@
         chatLog.push({sender: 'admin', text: msg});
 
         await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog) }).eq('id', id);
+        
+        // 🟢 ยิงแจ้งเตือน (ส่งจาก Admin)
+        triggerPushNotification("MAMA WRAP", "🏠 ร้านบอกว่า: " + msg);
+
         inputField.value = "";
         refreshOrders();
     }
@@ -416,9 +456,12 @@
     async function callCustomer(id) {
         const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
         await _supabase.from('orders').update({ call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
+        
+        // 🟢 ยิงแจ้งเตือน
+        triggerPushNotification("MAMA WRAP", "🔔 ร้านเรียกรับอาหารครับ!");
     }
 
-    async function sendReply(id) {
+    async function sendReply(id, cusName) {
         const inputField = document.getElementById(`rep_${id}`);
         const msg = inputField.value.trim();
         if(!msg) return;
@@ -435,11 +478,20 @@
         chatLog.push({sender: 'customer', text: msg});
 
         await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog), customer_note: msg }).eq('id', id);
+        
+        // 🟢 ยิงแจ้งเตือน (ส่งจากลูกค้า หา Admin)
+        triggerPushNotification("แอดมิน MAMA WRAP", `🙋‍♂️ คุณ ${cusName} ตอบกลับ: ${msg}`);
+
         inputField.value = "";
         refreshOrders();
     }
 
-    async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
+    async function updateStatus(id, s) { 
+        await _supabase.from('orders').update({ status: s }).eq('id', id); 
+        // 🟢 ยิงแจ้งเตือน
+        if (s === 'done') triggerPushNotification("MAMA WRAP", "✅ อาหารของคุณเสร็จแล้วครับ!");
+        refreshOrders(); 
+    }
 
     async function clearDoneOrders() {
         if(!confirm('ลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
