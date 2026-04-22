@@ -157,7 +157,7 @@
     let soundUnlocked = false;
     let isAdminActive = false;
 
-    // ระบบแอบปลดล็อกเสียงเงียบๆ
+    // ระบบแอบปลดล็อกเสียงเงียบๆ และขอสิทธิ์แจ้งเตือนระบบ
     function setupSilentUnlock() {
         const unlock = () => {
             if (soundUnlocked) return;
@@ -166,9 +166,23 @@
             const u = (s) => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => {}); };
             u(s1); u(s2);
             soundUnlocked = true;
+
+            // ขอสิทธิ์แจ้งเตือนบนมือถือ/PC
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
         };
         window.addEventListener('click', unlock, { once: true });
         window.addEventListener('touchstart', unlock, { once: true });
+    }
+
+    // ฟังก์ชันยิงแจ้งเตือนระบบเมื่อแอปอยู่เบื้องหลัง
+    function showSystemNotification(title, body) {
+        if ("Notification" in window && Notification.permission === "granted") {
+            if (document.visibilityState !== 'visible') {
+                new Notification(title, { body: body });
+            }
+        }
     }
 
     // เสียงอาหารเสร็จ/เรียก (orderdone.mp3)
@@ -214,13 +228,16 @@
                 if (o.customer_name === myName) {
                     if ((prev.status === 'cooking' && o.status === 'done') || (o.call_trigger > (prev.call_trigger || 0))) {
                         playOrderDone();
+                        showSystemNotification("MAMA WRAP", "อาหารของคุณเสร็จแล้ว / ร้านเรียกรับอาหารครับ!");
                     } else if (o.admin_note !== prev.admin_note && o.admin_note !== "") {
                         playMsgNotify();
+                        showSystemNotification("MAMA WRAP", "ร้านข้อความมา: " + o.admin_note);
                     }
                 }
                 // ฝั่ง Admin
                 if (isAdminActive && o.customer_note !== prev.customer_note && o.customer_note !== "") {
                     playMsgNotify();
+                    showSystemNotification("MAMA WRAP Admin", "ลูกค้าตอบกลับ: " + o.customer_note);
                 }
             }
             lastDataState[o.id] = o;
@@ -280,6 +297,7 @@
         if(!msg) return;
         await _supabase.from('orders').update({ admin_note: msg }).eq('id', id);
         inputField.value = "";
+        refreshOrders(); // โหลดใหม่ทันทีหลังส่ง จะได้ไม่รู้สึกว่าดีเลย์
     }
 
     async function callCustomer(id) {
@@ -293,6 +311,7 @@
         if(!msg) return;
         await _supabase.from('orders').update({ customer_note: msg }).eq('id', id);
         inputField.value = "";
+        refreshOrders(); // โหลดใหม่ทันทีหลังส่ง จะได้ไม่รู้สึกว่าดีเลย์
     }
 
     async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
