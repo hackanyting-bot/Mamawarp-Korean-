@@ -69,6 +69,12 @@
         .q-status-cooking { color: var(--warning-color); font-weight: bold; }
         .q-status-done { color: var(--success-color); font-weight: bold; }
 
+        /* ระบบแชท */
+        .admin-msg-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 12px; border-radius: 12px; margin-top: 10px; color: #d32f2f; font-size: 0.9em; position: relative; }
+        .customer-msg-box { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 12px; border-radius: 12px; margin-top: 10px; color: #2e7d32; font-size: 0.9em; text-align: right; }
+        .chat-input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; font-family: 'Kanit'; box-sizing: border-box; }
+        .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 8px; border-radius: 8px; width: 100%; margin-top: 5px; font-weight: bold; cursor: pointer; }
+
         /* รายการออเดอร์ของฉัน */
         .order-item {
             background: #fff;
@@ -100,41 +106,28 @@
 
         /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
-        
         .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-action {
-            flex: 1; padding: 10px; border: none; border-radius: 8px;
-            font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white;
-            font-size: 0.9em;
-        }
-
-        .admin-card {
-            background: #fff; padding: 15px; border-radius: 12px;
-            margin-bottom: 10px; border: 1px solid #ddd; text-align: left;
-        }
+        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; }
+        .admin-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #ddd; text-align: left; }
         .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-        .btn {
-            flex: 1; padding: 12px; border: none; border-radius: 10px;
-            color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer;
-        }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 10px; color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer; }
         .btn-cooking { background: var(--warning-color); }
         .btn-done { background: var(--success-color); }
 
-        .back-link { 
-            text-decoration: none; color: white; background: #333; 
-            padding: 12px; border-radius: 10px; display: block; 
-            margin-top: 15px; font-weight: bold; text-align: center;
-        }
+        .back-link { text-decoration: none; color: white; background: #333; padding: 12px; border-radius: 10px; display: block; margin-top: 15px; font-weight: bold; text-align: center; }
+        #secret-trigger { margin-top: 60px; color: #ddd; font-size: 0.7em; padding: 20px; user-select: none; -webkit-user-select: none; }
 
-        #secret-trigger {
-            margin-top: 60px; color: #ddd; font-size: 0.7em;
-            padding: 20px; user-select: none; -webkit-user-select: none;
-        }
+        /* ปุ่มเปิดเสียง */
+        #sound-notice { background: var(--primary-color); color: white; cursor: pointer; padding: 15px; border-radius: 15px; margin-bottom: 15px; width: 100%; border: none; font-weight: bold; font-family: 'Kanit'; }
     </style>
 </head>
 <body>
 
+<audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+
 <div class="container">
+    <button id="sound-notice" onclick="enableSound()">🔈 แตะเพื่อเปิดเสียงแจ้งเตือนเมื่ออาหารเสร็จ</button>
+
     <div class="queue-monitor">
         <div class="queue-header">
             📊 คิวหน้าร้านตอนนี้<br>
@@ -152,18 +145,16 @@
     </div>
 
     <div id="admin-ui">
-        <h2 style="text-align:center; color:#333; margin-bottom: 10px;">👨‍🍳 ระบบหลังบ้าน</h2>
-        
+        <h2 style="text-align:center; color:#333; margin-bottom: 10px;">👨‍🍳 ระบบหลังบ้าน & แชท</h2>
         <div class="admin-actions">
             <button class="btn-action" style="background:#ff9800;" onclick="clearDoneOrders()">🧹 ล้างที่เสร็จแล้ว</button>
             <button class="btn-action" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
         </div>
-
         <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v1.6</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v2.2</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -173,27 +164,38 @@
     const myName = localStorage.getItem('customerName') || "";
     const myPhone = localStorage.getItem('customerPhone') || "";
 
-    // ปิดบังชื่อลูกค้าในคิวรวมเพื่อความส่วนตัว
+    let lastDataState = {}; // เก็บข้อมูลล่าสุดเพื่อเช็คการแจ้งเตือน
+    let soundEnabled = false;
+
+    // ฟังก์ชันเปิดเสียง (ลูกค้าต้องกดครั้งแรก)
+    function enableSound() {
+        document.getElementById('notifySound').play().then(() => {
+            document.getElementById('notifySound').pause();
+            soundEnabled = true;
+            document.getElementById('sound-notice').style.display = 'none';
+        }).catch(err => alert('กรุณากดเปิดเสียงอีกครั้งครับ'));
+    }
+
+    function playNotify() {
+        if (soundEnabled) {
+            const audio = document.getElementById('notifySound');
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log(e));
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }
+    }
+
     function maskName(name) {
         if(!name) return "ลูกค้า";
         if(name.length <= 2) return name + "***";
         return name.substring(0, 2) + "***";
     }
 
-    function maskPhone(phone) {
-        if(!phone) return "---";
-        if(phone.length < 10) return phone;
-        return phone.substring(0, 3) + "XXX XXX";
-    }
-
     async function refreshOrders() {
-        // ดึงข้อมูลเรียงตามเวลาเก่าไปใหม่ (คิวแรกอยู่บนสุด)
         const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: true });
-        if (error) { console.error(error); return; }
+        if (error) return;
 
         const now = new Date().getTime();
-
-        // กรองออเดอร์ที่ยังแอคทีฟ (ถ้าเสร็จแล้วเกิน 1 ชม. ให้ซ่อน)
         const activeOrders = orders.filter(o => {
             if (o.status === 'done') {
                 const orderTime = new Date(o.created_at).getTime();
@@ -202,152 +204,101 @@
             return true;
         });
 
-        // ----------------------------------------------------
-        // 1. จัดการจอมอนิเตอร์คิวรวม (Public Queue)
-        // ----------------------------------------------------
-        let cookingCount = 0;
-        let queueHTML = "";
+        // ตรวจสอบสถานะเพื่อแจ้งเตือนเสียง
+        activeOrders.forEach(o => {
+            if (o.customer_name === myName) {
+                const prev = lastDataState[o.id];
+                if (prev) {
+                    // 1. อาหารเสร็จ 2. มีการกดเรียกจากร้าน 3. มีข้อความใหม่จากร้าน
+                    if ((prev.status === 'cooking' && o.status === 'done') || 
+                        (o.call_trigger > (prev.call_trigger || 0)) ||
+                        (o.admin_note !== prev.admin_note && o.admin_note !== "")) {
+                        playNotify();
+                    }
+                }
+                lastDataState[o.id] = o;
+            }
+        });
 
-        if (activeOrders.length === 0) {
-            queueHTML = '<div style="text-align:center; color:#999; padding:10px;">ตอนนี้คิวว่าง ลุยสั่งได้เลยจ้า!</div>';
-        } else {
-            activeOrders.forEach((o, index) => {
-                if (o.status === 'cooking') cookingCount++;
-                
-                const statusIcon = o.status === 'done' ? '✅ เสร็จแล้ว' : '👨‍🍳 กำลังทำ';
-                const statusClass = o.status === 'done' ? 'q-status-done' : 'q-status-cooking';
-                
-                queueHTML += `
-                    <div class="queue-row">
-                        <div class="q-number">คิวที่ ${index + 1} - คุณ ${maskName(o.customer_name)}</div>
-                        <div class="${statusClass}">${statusIcon}</div>
-                    </div>
-                `;
-            });
-        }
+        // 1. คิวรวม
+        let cookingCount = 0;
+        let queueHTML = activeOrders.length === 0 ? '<div style="text-align:center; color:#999; padding:10px;">คิวว่างจ้า</div>' : "";
+        activeOrders.forEach((o, index) => {
+            if (o.status === 'cooking') cookingCount++;
+            queueHTML += `<div class="queue-row"><div class="q-number">คิวที่ ${index+1} - คุณ ${maskName(o.customer_name)}</div><div class="${o.status==='done'?'q-status-done':'q-status-cooking'}">${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}</div></div>`;
+        });
         document.getElementById('queue-count').innerText = cookingCount;
         document.getElementById('public-queue-list').innerHTML = queueHTML;
 
-        // ----------------------------------------------------
-        // 2. จัดการรายการออเดอร์ของฉัน (My Orders)
-        // ----------------------------------------------------
-        // เอาออเดอร์ที่แอคทีฟมาเรียงกลับด้าน เพื่อให้บิลล่าสุดของฉันอยู่บนสุด
-        const myOrders = activeOrders.filter(o => (myName !== "" && o.customer_name === myName) || (myPhone !== "" && o.customer_phone === myPhone)).reverse();
-
+        // 2. ออเดอร์ของฉัน
+        const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
         const listDiv = document.getElementById('order-list');
-        
         if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ของคุณ<br><small>กรุณาสั่งอาหารก่อนนะครับ</small></p>`;
+            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุด</p>`;
         } else {
-            listDiv.innerHTML = myOrders.map(o => {
-                let statusText = "👨‍🍳 กำลังเตรียมอาหาร";
-                let statusClass = "badge-cooking";
-                let itemClass = "";
-
-                if (o.status === 'done') {
-                    if (o.delivery_type && o.delivery_type.includes('ส่ง')) {
-                        statusText = "🛵 กำลังออกไปส่ง";
-                        statusClass = "badge-out";
-                        itemClass = "status-delivery";
-                    } else {
-                        statusText = "✅ อาหารเสร็จแล้ว (มารับได้เลย)";
-                        statusClass = "badge-done";
-                        itemClass = "status-done";
-                    }
-                }
-
-                return `
-                    <div class="order-item ${itemClass}">
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                        <div class="customer-info">คุณ ${o.customer_name} (${maskPhone(o.customer_phone)})</div>
-                        <div class="order-details">${o.order_details}</div>
-                    </div>
-                `;
-            }).join('');
+            listDiv.innerHTML = myOrders.map(o => `
+                <div class="order-item ${o.status === 'done' ? 'status-done' : ''}">
+                    <span class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}</span>
+                    <div class="customer-info">คุณ ${o.customer_name}</div>
+                    <div class="order-details">${o.order_details}</div>
+                    ${o.admin_note ? `<div class="admin-msg-box">🏠 <b>ร้านส่งข้อความ:</b> ${o.admin_note}</div>` : ''}
+                    ${o.customer_note ? `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${o.customer_note}</div>` : ''}
+                    <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
+                    <button class="btn-send-chat" onclick="sendReply('${o.id}', document.getElementById('rep_${o.id}').value)">ส่งข้อความตอบกลับ</button>
+                </div>
+            `).join('');
         }
 
-        // ----------------------------------------------------
-        // 3. จัดการฝั่ง Admin (ถ้าเปิดใช้งาน)
-        // ----------------------------------------------------
+        // 3. หลังบ้าน (Admin)
         if (document.getElementById('admin-ui').style.display === 'block') {
             const adminList = document.getElementById('admin-order-list');
-            // แอดมินดูแบบเรียงบิลใหม่ล่าสุดอยู่บน
             const adminOrders = [...activeOrders].reverse();
-
-            if(adminOrders.length === 0) {
-                adminList.innerHTML = `<p style="text-align:center; color:#888;">ว่างเปล่า ไม่มีออเดอร์ค้าง</p>`;
-            } else {
-                adminList.innerHTML = adminOrders.map(o => `
-                    <div class="admin-card">
-                        <strong>${o.customer_name}</strong> - ${o.customer_phone || 'ไม่มีเบอร์'}<br>
-                        <small>รับของ: ${o.delivery_type || 'ไม่ระบุ'} | สถานะ: ${o.status === 'done' ? '✅ เสร็จ' : '👨‍🍳 ทำอาหาร'}</small><br>
-                        <div style="margin-top:5px; margin-bottom:10px;">${o.order_details}</div>
-                        <div class="btn-group">
-                            <button class="btn btn-cooking" onclick="updateStatus('${o.id}', 'cooking')">กำลังทำ</button>
-                            <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">เสร็จแล้ว</button>
-                        </div>
+            adminList.innerHTML = adminOrders.map(o => `
+                <div class="admin-card" style="${o.customer_note ? 'border: 2px solid var(--success-color)' : ''}">
+                    <strong>${o.customer_name}</strong>
+                    <div style="font-size:0.8em;">${o.order_details}</div>
+                    ${o.customer_note ? `<div style="color:var(--success-color); margin-top:5px;">🙋‍♂️ <b>ลูกค้าตอบว่า:</b> ${o.customer_note}</div>` : ''}
+                    <input type="text" id="note_${o.id}" class="chat-input" placeholder="พิมพ์หาลูกค้า..." value="${o.admin_note || ''}">
+                    <div class="btn-group">
+                        <button class="btn btn-cooking" style="background:var(--warning-color)" onclick="sendAdminNote('${o.id}', document.getElementById('note_${o.id}').value)">💬 ส่ง/เรียก</button>
+                        <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">✅ เสร็จ</button>
                     </div>
-                `).join('');
-            }
+                </div>
+            `).join('');
         }
     }
 
-    async function updateStatus(id, newStatus) {
-        try {
-            const { error } = await _supabase.from('orders').update({ status: newStatus }).eq('id', id);
-            if (error) throw error;
-            refreshOrders();
-        } catch(e) { alert("Error: " + e.message); }
+    async function sendAdminNote(id, msg) {
+        const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
+        await _supabase.from('orders').update({ admin_note: msg, call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
+        alert('ส่งข้อความและเรียกเสียงแจ้งเตือนแล้ว!');
     }
 
-    async function clearDoneOrders() {
-        if(!confirm('ยืนยันลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม? (คิวจะถูกรีเซ็ตตามบิลที่เหลือ)')) return;
-        try {
-            const { error } = await _supabase.from('orders').delete().eq('status', 'done');
-            if (error) throw error;
-            refreshOrders();
-        } catch(e) { alert("ลบไม่ได้: " + e.message); }
+    async function sendReply(id, msg) {
+        if(!msg) return;
+        await _supabase.from('orders').update({ customer_note: msg }).eq('id', id);
+        alert('ส่งข้อความหาร้านแล้วครับ');
+        document.getElementById(`rep_${id}`).value = "";
     }
 
-    async function clearAllOrders() {
-        if(!confirm('⚠️ ยืนยันการ "ล้างออเดอร์ทั้งหมด" ในระบบ? (ลบจริง กู้ไม่ได้นะ)')) return;
-        try {
-            const { data, error: fetchError } = await _supabase.from('orders').select('id');
-            if (fetchError) throw fetchError;
-            if (data && data.length > 0) {
-                const ids = data.map(o => o.id);
-                const { error: deleteError } = await _supabase.from('orders').delete().in('id', ids);
-                if (deleteError) throw deleteError;
-            }
-            refreshOrders();
-        } catch(e) { alert("ลบไม่ได้: " + e.message); }
-    }
+    async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
+    async function clearDoneOrders() { if(confirm('ล้างที่เสร็จแล้ว?')) { await _supabase.from('orders').delete().eq('status', 'done'); refreshOrders(); } }
+    async function clearAllOrders() { if(confirm('ล้างทั้งหมด?')) { const { data } = await _supabase.from('orders').select('id'); if(data) await _supabase.from('orders').delete().in('id', data.map(o => o.id)); refreshOrders(); } }
 
-    // Real-time Update ให้คิวเลื่อนทันทีที่ระบบมีการเปลี่ยนแปลง
     _supabase.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
-    // Admin Login (กดค้างที่เวอร์ชั่นด้านล่าง)
     let timer;
-    const trigger = document.getElementById('secret-trigger');
-
-    function handleStart() {
+    document.getElementById('secret-trigger').onmousedown = document.getElementById('secret-trigger').ontouchstart = () => {
         timer = setTimeout(() => {
-            if (prompt("ระบุรหัสพนักงาน:") === "0420") {
+            if (prompt("รหัสพนักงาน:") === "0420") {
                 document.getElementById('admin-ui').style.display = 'block';
                 refreshOrders();
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }
         }, 2000);
-    }
-    function handleEnd() { clearTimeout(timer); }
-
-    trigger.addEventListener('touchstart', handleStart);
-    trigger.addEventListener('touchend', handleEnd);
-    trigger.addEventListener('mousedown', handleStart);
-    trigger.addEventListener('mouseup', handleEnd);
+    };
+    document.getElementById('secret-trigger').onmouseup = document.getElementById('secret-trigger').ontouchend = () => clearTimeout(timer);
 
     refreshOrders();
 </script>
-
 </body>
 </html>
