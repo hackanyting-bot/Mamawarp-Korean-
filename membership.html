@@ -26,9 +26,12 @@
         /* Admin Dashboard Styles */
         #admin_dashboard { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 20px; }
-        .user-card { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 10px; text-align: left; border-left: 5px solid var(--secondary-color); display: flex; justify-content: space-between; align-items: center; }
-        .user-info b { color: var(--primary-color); }
-        .user-points { background: var(--primary-color); color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; }
+        .user-card { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 15px; text-align: left; border-left: 5px solid var(--secondary-color); }
+        .user-info b { color: var(--primary-color); font-size: 1.1em; }
+        .user-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-edit { background: #0288d1; color: white; padding: 8px; font-size: 0.85em; border-radius: 8px; flex: 1; text-align: center; font-weight: bold; }
+        .btn-delete { background: #d32f2f; color: white; padding: 8px; font-size: 0.85em; border-radius: 8px; width: 40px; text-align: center; }
+        .user-points-badge { background: var(--primary-color); color: white; padding: 2px 10px; border-radius: 10px; float: right; font-weight: bold; }
         .close-admin { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
         
         #card_section, #admin_loader { display: none; }
@@ -76,7 +79,7 @@
         <h3 style="margin:0;">📊 รายชื่อสมาชิกทั้งหมด</h3>
         <button class="close-admin" onclick="closeAdmin()">ปิด</button>
     </div>
-    <div id="admin_stat" style="margin-bottom: 15px; font-weight: bold; color: #666;"></div>
+    <div id="admin_stat" style="margin-bottom: 15px; font-weight: bold; color: #666; text-align: center;"></div>
     <div id="user_list_container">กำลังดึงข้อมูล...</div>
 </div>
 
@@ -91,14 +94,13 @@
 
     let currentCustomer = null;
 
-    // --- ระบบ Admin กดค้าง ---
+    // --- ระบบ Admin (กดค้างที่หัวข้อ) ---
     let pressTimer;
     const adminTrigger = document.getElementById('adminTrigger');
 
     adminTrigger.onmousedown = adminTrigger.ontouchstart = () => {
         pressTimer = setTimeout(() => {
-            const pwd = prompt("ระบุรหัสเจ้าของร้าน:");
-            if (pwd === "0420") {
+            if (prompt("ระบุรหัสเจ้าของร้าน:") === "0420") {
                 openAdminDashboard();
             }
         }, 2000);
@@ -124,10 +126,14 @@
             container.innerHTML = data.map(u => `
                 <div class="user-card">
                     <div class="user-info">
+                        <span class="user-points-badge">${u.points} แต้ม</span>
                         <b>${u.customer_name}</b><br>
                         <small>📞 ${u.phone}</small>
                     </div>
-                    <div class="user-points">${u.points} แต้ม</div>
+                    <div class="user-actions">
+                        <div class="btn-edit" onclick="editUserPoints('${u.phone}', ${u.points}, '${u.customer_name}')">✏️ แก้ไขแต้ม</div>
+                        <div class="btn-delete" onclick="deleteUser('${u.phone}', '${u.customer_name}')">🗑️</div>
+                    </div>
                 </div>
             `).join('');
         } catch (err) {
@@ -135,31 +141,40 @@
         }
     }
 
-    function closeAdmin() { document.getElementById('admin_dashboard').style.display = 'none'; }
-    // -------------------------
+    // ฟังก์ชันแก้ไขแต้มลูกค้า
+    async function editUserPoints(phone, currentPoints, name) {
+        const newPoints = prompt(`แก้ไขแต้มของคุณ ${name}\nแต้มปัจจุบันคือ: ${currentPoints}\nใส่แต้มใหม่ที่ต้องการ:`, currentPoints);
+        if (newPoints === null || newPoints === "") return;
+        
+        const pts = parseInt(newPoints);
+        if (isNaN(pts) || pts < 0) return alert("กรุณาใส่ตัวเลขที่ถูกต้องครับ");
 
-    async function checkApprovalURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const approvePhone = urlParams.get('approve');
-        if (approvePhone) {
-            document.getElementById('main_ui').style.display = 'none';
-            document.getElementById('admin_loader').style.display = 'block';
-            
-            try {
-                const { data: user, error: fetchErr } = await _sb.from('point_membership').select('*').eq('phone', approvePhone).single();
-                if (fetchErr || !user) throw new Error('ไม่พบข้อมูลลูกค้า');
-
-                const newPoints = (user.points || 0) + 1;
-                const { error: updErr } = await _sb.from('point_membership').update({ points: newPoints }).eq('phone', approvePhone);
-                if (updErr) throw updErr;
-
-                alert(`✅ ยืนยันแต้มให้คุณ ${user.customer_name} สำเร็จ!\nแต้มเดิม: ${user.points} -> แต้มใหม่: ${newPoints}`);
-            } catch (err) {
-                alert('❌ เกิดข้อผิดพลาด: ' + err.message);
-            }
-            window.location.href = window.location.origin + window.location.pathname; 
+        try {
+            const { error } = await _sb.from('point_membership').update({ points: pts }).eq('phone', phone);
+            if (error) throw error;
+            alert(`อัปเดตแต้มคุณ ${name} เป็น ${pts} เรียบร้อย!`);
+            openAdminDashboard(); // รีเฟรชหน้าจอ
+        } catch (err) {
+            alert("ผิดพลาด: " + err.message);
         }
     }
+
+    // ฟังก์ชันลบสมาชิก
+    async function deleteUser(phone, name) {
+        if (!confirm(`⚠️ ยืนยันการลบสมาชิก: คุณ ${name}?\n(เบอร์ ${phone} ข้อมูลแต้มจะหายถาวร!)`)) return;
+
+        try {
+            const { error } = await _sb.from('point_membership').delete().eq('phone', phone);
+            if (error) throw error;
+            alert("ลบข้อมูลเรียบร้อยครับ");
+            openAdminDashboard(); // รีเฟรชหน้าจอ
+        } catch (err) {
+            alert("ผิดพลาด: " + err.message);
+        }
+    }
+
+    function closeAdmin() { document.getElementById('admin_dashboard').style.display = 'none'; }
+    // ---------------------------------
 
     async function handleLogin() {
         const name = document.getElementById('cust_name').value.trim();
@@ -176,12 +191,12 @@
 
             if (phoneData) {
                 if (phoneData.customer_name !== name) {
-                    alert(`⚠️ เบอร์โทรนี้ลงทะเบียนด้วยชื่อ "${phoneData.customer_name}" ไปแล้ว\n\nหากนี่คือเบอร์ของคุณ กรุณาใช้ชื่อเดิมครับ`);
+                    alert(`⚠️ เบอร์โทรนี้ถูกลงทะเบียนด้วยชื่อ "${phoneData.customer_name}" ไปแล้ว\nหากนี่คือเบอร์ของคุณ กรุณาใช้ชื่อเดิมครับ`);
                     return;
                 }
                 currentCustomer = phoneData;
             } else if (nameData) {
-                alert(`⚠️ ชื่อ "${name}" มีอยู่ในระบบแล้ว แต่ใช้เบอร์อื่น\n\nกรุณาใช้เบอร์เดิมสะสมแต้มต่อครับ`);
+                alert(`⚠️ ชื่อ "${name}" มีอยู่ในระบบแล้ว แต่ใช้เบอร์อื่น\nกรุณาใช้เบอร์เดิมสะสมแต้มต่อยอดเดิมครับ`);
                 return;
             } else {
                 const { data: newUser, error: insErr } = await _sb.from('point_membership').insert([{ customer_name: name, phone: phone, points: 0 }]).select().single();
@@ -207,7 +222,7 @@
         
         for(let i=1; i<=10; i++) {
             const slot = document.getElementById('s'+i);
-            if(i <= currentCustomer.points) slot.classList.add('active');
+            if(i <= (currentCustomer.points || 0)) slot.classList.add('active');
             else slot.classList.remove('active');
         }
     }
@@ -236,7 +251,6 @@
     }
 
     async function init() {
-        await checkApprovalURL();
         const savedPhone = localStorage.getItem('mama_member_phone');
         if(savedPhone) {
             const { data } = await _sb.from('point_membership').select('*').eq('phone', savedPhone).maybeSingle();
