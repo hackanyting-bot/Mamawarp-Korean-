@@ -112,7 +112,7 @@
         .back-link { text-decoration: none; color: white; background: #333; padding: 12px; border-radius: 10px; display: block; margin-top: 15px; font-weight: bold; text-align: center; }
         #secret-trigger { margin-top: 60px; color: #ddd; font-size: 0.7em; padding: 20px; user-select: none; -webkit-user-select: none; }
 
-        /* แถบแชท (อัปเดตใหม่) */
+        /* แถบแชท */
         .chat-container { scroll-behavior: smooth; }
         .chat-container::-webkit-scrollbar { width: 4px; }
         .chat-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
@@ -153,13 +153,11 @@
 <div id="secret-trigger">MAMA WRAP SYSTEM v2.8</div>
 
 <script>
-    // ----------------------------------------------------
-    // ลงทะเบียน Service Worker สำหรับ PWA และแจ้งเตือนเบื้องหลัง
-    // ----------------------------------------------------
+    // ลงทะเบียน Service Worker สำหรับ PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js').then((registration) => {
-                console.log('ServiceWorker ทำงานเรียบร้อย: ', registration.scope);
+                console.log('ServiceWorker ทำงานเรียบร้อย');
             }).catch((err) => {
                 console.log('ServiceWorker ติดตั้งไม่สำเร็จ: ', err);
             });
@@ -180,7 +178,7 @@
         document.getElementById('admin-ui').style.display = 'block';
     }
 
-    // ฟังก์ชันคืนชีพตอนตื่นจากพื้นหลัง (Visibility API)
+    // ฟังก์ชันคืนชีพตอนตื่นจากพื้นหลัง
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
             refreshOrders();
@@ -197,7 +195,6 @@
             u(s1); u(s2);
             soundUnlocked = true;
 
-            // ขอสิทธิ์แจ้งเตือนบนมือถือ/PC
             if ("Notification" in window && Notification.permission !== "granted") {
                 Notification.requestPermission();
             }
@@ -206,7 +203,6 @@
         window.addEventListener('touchstart', unlock, { once: true });
     }
 
-    // ฟังก์ชันยิงแจ้งเตือนระบบเมื่อแอปอยู่เบื้องหลัง
     function showSystemNotification(title, body) {
         if ("Notification" in window && Notification.permission === "granted") {
             if (document.visibilityState !== 'visible') {
@@ -215,7 +211,6 @@
         }
     }
 
-    // เสียงอาหารเสร็จ/เรียก (orderdone.mp3)
     function playOrderDone() {
         if (soundUnlocked) {
             const audio = document.getElementById('orderDoneSound');
@@ -224,7 +219,6 @@
         }
     }
 
-    // เสียงข้อความเข้า (notify.mp3)
     function playMsgNotify() {
         if (soundUnlocked) {
             const audio = document.getElementById('msgNotifySound');
@@ -237,6 +231,23 @@
         if(!name) return "ลูกค้า";
         if(name.length <= 2) return name + "***";
         return name.substring(0, 2) + "***";
+    }
+
+    // ฟังก์ชันช่วยดึงข้อความล่าสุดแบบปลอดภัย 100% ไม่พังตอนค่าว่าง
+    function extractLatestText(noteStr, expectedSender) {
+        if (!noteStr) return null;
+        try {
+            let parsed = JSON.parse(noteStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                let lastMsg = parsed[parsed.length - 1];
+                if (lastMsg.sender === expectedSender) return lastMsg.text;
+                return null;
+            }
+        } catch(e) {
+            // ถ้าพังแปลว่าเป็นข้อความระบบเก่า (ไม่ใช่ JSON)
+            return noteStr;
+        }
+        return null;
     }
 
     async function refreshOrders() {
@@ -259,52 +270,35 @@
                     if ((prev.status === 'cooking' && o.status === 'done') || (o.call_trigger > (prev.call_trigger || 0))) {
                         playOrderDone();
                         showSystemNotification("MAMA WRAP", "อาหารของคุณเสร็จแล้ว / ร้านเรียกรับอาหารครับ!");
-                    } else {
-                        // เช็คแชทล่าสุดว่ามาจากร้านหรือไม่
-                        let isNewAdminMsg = false;
-                        let latestAdminMsg = "";
-                        try {
-                            let currentLog = JSON.parse(o.admin_note);
-                            let prevLog = prev.admin_note ? JSON.parse(prev.admin_note) : [];
-                            if (currentLog.length > prevLog.length && currentLog[currentLog.length - 1].sender === 'admin') {
-                                isNewAdminMsg = true;
-                                latestAdminMsg = currentLog[currentLog.length - 1].text;
-                            }
-                        } catch(e) {
-                            if (o.admin_note !== prev.admin_note && o.admin_note !== "") {
-                                isNewAdminMsg = true;
-                                latestAdminMsg = o.admin_note;
-                            }
-                        }
-
-                        if (isNewAdminMsg) {
+                    } else if (o.admin_note !== prev.admin_note && o.admin_note !== "") {
+                        let latestAdminText = extractLatestText(o.admin_note, 'admin');
+                        if (latestAdminText) {
                             playMsgNotify();
-                            showSystemNotification("MAMA WRAP", "ร้านข้อความมา: " + latestAdminMsg);
+                            showSystemNotification("MAMA WRAP", "ร้านข้อความมา: " + latestAdminText);
                         }
                     }
                 }
                 
-                // ฝั่ง Admin เช็คแชทล่าสุดว่ามาจากลูกค้าหรือไม่
+                // ฝั่ง Admin
                 if (isAdminActive) {
                     let isNewCustomerMsg = false;
-                    let latestCustomerMsg = "";
-                    try {
-                        let currentLog = JSON.parse(o.admin_note);
-                        let prevLog = prev.admin_note ? JSON.parse(prev.admin_note) : [];
-                        if (currentLog.length > prevLog.length && currentLog[currentLog.length - 1].sender === 'customer') {
-                            isNewCustomerMsg = true;
-                            latestCustomerMsg = currentLog[currentLog.length - 1].text;
-                        }
-                    } catch(e) {
-                        if (o.customer_note !== prev.customer_note && o.customer_note !== "") {
-                            isNewCustomerMsg = true;
-                            latestCustomerMsg = o.customer_note;
-                        }
+                    let txtToNotify = "";
+
+                    // เช็คจาก JSON แบบใหม่
+                    if (o.admin_note !== prev.admin_note) {
+                        let extracted = extractLatestText(o.admin_note, 'customer');
+                        if (extracted) { isNewCustomerMsg = true; txtToNotify = extracted; }
+                    }
+                    
+                    // เช็คจากข้อมูลระบบเก่าที่ยังใช้ช่อง customer_note อยู่
+                    if (!isNewCustomerMsg && o.customer_note !== prev.customer_note && o.customer_note !== "") {
+                        isNewCustomerMsg = true;
+                        txtToNotify = o.customer_note;
                     }
 
                     if (isNewCustomerMsg) {
                         playMsgNotify();
-                        showSystemNotification("MAMA WRAP Admin", "ลูกค้าตอบกลับ: " + latestCustomerMsg);
+                        showSystemNotification("MAMA WRAP Admin", "ลูกค้าตอบกลับ: " + txtToNotify);
                     }
                 }
             }
@@ -321,7 +315,7 @@
         document.getElementById('queue-count').innerText = cookingCount;
         document.getElementById('public-queue-list').innerHTML = queueHTML;
 
-        // 2. ออเดอร์ของฉัน (สร้างประวัติแชทเรียงลงมา)
+        // 2. ออเดอร์ของฉัน
         const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
         const listDiv = document.getElementById('order-list');
         if (myOrders.length === 0) {
@@ -337,7 +331,7 @@
                             else chatHTML += `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${c.text}</div>`;
                         });
                     }
-                } catch(e) { // รองรับข้อมูลเก่าที่ยังไม่เป็น JSON
+                } catch(e) {
                     if (o.admin_note) chatHTML += `<div class="admin-msg-box">🏠 <b>ร้านบอกว่า:</b> ${o.admin_note}</div>`;
                     if (o.customer_note) chatHTML += `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${o.customer_note}</div>`;
                 }
@@ -393,11 +387,8 @@
             }).join('');
         }
 
-        // เลื่อนแชทลงมาล่างสุดเสมอเมื่อมีข้อความใหม่
         setTimeout(() => {
-            document.querySelectorAll('.chat-container').forEach(el => {
-                el.scrollTop = el.scrollHeight;
-            });
+            document.querySelectorAll('.chat-container').forEach(el => { el.scrollTop = el.scrollHeight; });
         }, 50);
     }
 
@@ -409,4 +400,24 @@
         let o = lastDataState[id] || { admin_note: "", customer_note: "" };
         let chatLog = [];
         try {
-         
+            let parsed = JSON.parse(o.admin_note);
+            if(Array.isArray(parsed)) chatLog = parsed;
+        } catch(e) {
+            if(o.admin_note) chatLog.push({sender: 'admin', text: o.admin_note});
+            if(o.customer_note) chatLog.push({sender: 'customer', text: o.customer_note});
+        }
+        chatLog.push({sender: 'admin', text: msg});
+
+        await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog) }).eq('id', id);
+        inputField.value = "";
+        refreshOrders();
+    }
+
+    async function callCustomer(id) {
+        const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
+        await _supabase.from('orders').update({ call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
+    }
+
+    async function sendReply(id) {
+        const inputField = document.getElementById(`rep_${id}`);
+        const msg = 
