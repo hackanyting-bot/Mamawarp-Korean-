@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAMA WRAP - Tracking & Monitor</title>
+    <title>MAMA WRAP - Tracking</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MAMA WRAP">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -13,9 +21,9 @@
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "df78d0a1-1073-4072-b6d4-dd65f1842dc4",
-          serviceWorkerPath: "sw.js", // ชี้ไปที่ไฟล์ sw.js ของเรา
+          serviceWorkerPath: "sw.js",
           notifyButton: {
-            enable: true, // เปิดปุ่มกระดิ่งให้ลูกค้ากดรับการแจ้งเตือน
+            enable: true,
             displayPredicate: () => true,
             colors: {
                 'circle.background': '#d32f2f',
@@ -243,7 +251,7 @@
         return name.substring(0, 2) + "***";
     }
 
-    // 🟢 ฟังก์ชันออกจากระบบแอดมิน
+    // ฟังก์ชันออกจากระบบแอดมิน
     function logoutAdmin() {
         if(!confirm('ต้องการออกจากโหมดแอดมินใช่ไหม?')) return;
         localStorage.removeItem('isMAMAWrapAdmin');
@@ -252,17 +260,20 @@
         refreshOrders();
     }
 
-    // 🟢 ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอผ่าน OneSignal
+    // ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอผ่าน OneSignal
     async function triggerPushNotification(title, message) {
         const appId = "df78d0a1-1073-4072-b6d4-dd65f1842dc4";
         const restKey = "os_v2_app_354nbiiqonahfnwu3vs7dbbnyq63ldn4vkoecyvbxc4jluzkzqokuj5hw26gumvccerbhxuaem5kjich5tsftvukzj4ys3arxywyb7i";
 
         const payload = {
             app_id: appId,
-            included_segments: ["All"], // แจ้งเตือนทุกคนที่กดรับกระดิ่ง
+            included_segments: ["All"], 
             headings: { en: title },
             contents: { en: message },
-            url: window.location.href
+            url: window.location.href,
+            // บังคับให้ Push ไม่หมดอายุเร็วเกินไป และปลุกมือถือ
+            priority: 10, 
+            ttl: 3600
         };
 
         try {
@@ -290,7 +301,6 @@
                 return null;
             }
         } catch(e) {
-            // ถ้าพังแปลว่าเป็นข้อความระบบเก่า (ไม่ใช่ JSON)
             return noteStr;
         }
         return null;
