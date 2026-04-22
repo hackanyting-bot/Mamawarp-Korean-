@@ -9,8 +9,8 @@
     <style>
         :root { --primary-color: #d32f2f; --secondary-color: #ffcc00; --bg-color: #fff9e6; }
         body { font-family: 'Kanit', sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { width: 90%; max-width: 400px; background: white; padding: 25px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 4px solid var(--secondary-color); text-align: center; }
-        h2 { color: var(--primary-color); margin: 0 0 5px 0; }
+        .container { width: 90%; max-width: 400px; background: white; padding: 25px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 4px solid var(--secondary-color); text-align: center; position: relative; }
+        h2 { color: var(--primary-color); margin: 0 0 5px 0; cursor: pointer; user-select: none; -webkit-user-select: none; }
         .subtitle { font-size: 0.9em; color: #666; margin-bottom: 25px; }
         input { width: 100%; padding: 15px; margin: 10px 0; border: 2px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 1em; outline: none; }
         .stamp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 25px 0; background: #fff5d7; padding: 20px; border-radius: 20px; border: 2px dashed var(--primary-color); }
@@ -22,6 +22,15 @@
         .btn-primary { background: var(--primary-color); color: white; margin-top: 10px; }
         .btn-primary:disabled { background: #ccc; }
         .btn-secondary { background: #757575; color: white; margin-top: 10px; }
+        
+        /* Admin Dashboard Styles */
+        #admin_dashboard { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; margin-bottom: 20px; }
+        .user-card { background: #f9f9f9; padding: 15px; border-radius: 15px; margin-bottom: 10px; text-align: left; border-left: 5px solid var(--secondary-color); display: flex; justify-content: space-between; align-items: center; }
+        .user-info b { color: var(--primary-color); }
+        .user-points { background: var(--primary-color); color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; }
+        .close-admin { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
+        
         #card_section, #admin_loader { display: none; }
         .status-msg { margin-top: 15px; font-size: 0.9em; color: #2e7d32; font-weight: bold; }
     </style>
@@ -30,7 +39,7 @@
 
 <div class="container">
     <div id="main_ui">
-        <h2>บัตรสะสมแต้ม</h2>
+        <h2 id="adminTrigger">บัตรสะสมแต้ม</h2>
         <p class="subtitle">มาม่าเกาหลีห่อไข่ (10 แถม 1)</p>
 
         <div id="login_section">
@@ -62,6 +71,15 @@
     </div>
 </div>
 
+<div id="admin_dashboard">
+    <div class="admin-header">
+        <h3 style="margin:0;">📊 รายชื่อสมาชิกทั้งหมด</h3>
+        <button class="close-admin" onclick="closeAdmin()">ปิด</button>
+    </div>
+    <div id="admin_stat" style="margin-bottom: 15px; font-weight: bold; color: #666;"></div>
+    <div id="user_list_container">กำลังดึงข้อมูล...</div>
+</div>
+
 <script>
     const SB_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
@@ -73,7 +91,53 @@
 
     let currentCustomer = null;
 
-    // 1. ฟังก์ชันยืนยันแต้ม (สำหรับคุณกดยืนยันจาก Telegram)
+    // --- ระบบ Admin กดค้าง ---
+    let pressTimer;
+    const adminTrigger = document.getElementById('adminTrigger');
+
+    adminTrigger.onmousedown = adminTrigger.ontouchstart = () => {
+        pressTimer = setTimeout(() => {
+            const pwd = prompt("ระบุรหัสเจ้าของร้าน:");
+            if (pwd === "0420") {
+                openAdminDashboard();
+            }
+        }, 2000);
+    };
+    adminTrigger.onmouseup = adminTrigger.ontouchend = () => clearTimeout(pressTimer);
+
+    async function openAdminDashboard() {
+        document.getElementById('admin_dashboard').style.display = 'block';
+        const container = document.getElementById('user_list_container');
+        container.innerHTML = "กำลังดึงข้อมูล...";
+
+        try {
+            const { data, error } = await _sb.from('point_membership').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+
+            document.getElementById('admin_stat').innerText = `จำนวนลูกค้าทั้งหมด: ${data.length} คน`;
+            
+            if (data.length === 0) {
+                container.innerHTML = "ยังไม่มีลูกค้าลงทะเบียน";
+                return;
+            }
+
+            container.innerHTML = data.map(u => `
+                <div class="user-card">
+                    <div class="user-info">
+                        <b>${u.customer_name}</b><br>
+                        <small>📞 ${u.phone}</small>
+                    </div>
+                    <div class="user-points">${u.points} แต้ม</div>
+                </div>
+            `).join('');
+        } catch (err) {
+            container.innerHTML = "เกิดข้อผิดพลาด: " + err.message;
+        }
+    }
+
+    function closeAdmin() { document.getElementById('admin_dashboard').style.display = 'none'; }
+    // -------------------------
+
     async function checkApprovalURL() {
         const urlParams = new URLSearchParams(window.location.search);
         const approvePhone = urlParams.get('approve');
@@ -82,11 +146,9 @@
             document.getElementById('admin_loader').style.display = 'block';
             
             try {
-                // ดึงข้อมูลล่าสุด
                 const { data: user, error: fetchErr } = await _sb.from('point_membership').select('*').eq('phone', approvePhone).single();
                 if (fetchErr || !user) throw new Error('ไม่พบข้อมูลลูกค้า');
 
-                // เพิ่มแต้ม
                 const newPoints = (user.points || 0) + 1;
                 const { error: updErr } = await _sb.from('point_membership').update({ points: newPoints }).eq('phone', approvePhone);
                 if (updErr) throw updErr;
@@ -99,7 +161,6 @@
         }
     }
 
-    // 2. เข้าสู่ระบบ / ลงทะเบียน (พร้อมระบบป้องกันข้อมูลซ้ำซ้อน)
     async function handleLogin() {
         const name = document.getElementById('cust_name').value.trim();
         const phone = document.getElementById('cust_phone').value.trim();
@@ -109,30 +170,24 @@
         btn.disabled = true; btn.innerText = 'กำลังตรวจสอบข้อมูล...';
 
         try {
-            // เช็คว่ามีเบอร์นี้ในระบบหรือยัง
             const { data: phoneData } = await _sb.from('point_membership').select('*').eq('phone', phone).maybeSingle();
-            
-            // เช็คว่ามีชื่อนี้ในระบบหรือยัง (เอามาแค่รายการเดียวเผื่อมีคนชื่อซ้ำกัน)
             const { data: nameDataList } = await _sb.from('point_membership').select('*').eq('customer_name', name).limit(1);
             const nameData = nameDataList && nameDataList.length > 0 ? nameDataList[0] : null;
 
             if (phoneData) {
-                // กรณีใส่เบอร์เดิม แต่พิมพ์ชื่อไม่ตรงกับในระบบ
                 if (phoneData.customer_name !== name) {
-                    alert(`⚠️ เบอร์โทรนี้ถูกลงทะเบียนด้วยชื่อ "${phoneData.customer_name}" ไปแล้ว\n\nหากนี่คือเบอร์ของคุณ กรุณาใช้ชื่อเดิมเพื่อเข้าสู่ระบบครับ`);
+                    alert(`⚠️ เบอร์โทรนี้ลงทะเบียนด้วยชื่อ "${phoneData.customer_name}" ไปแล้ว\n\nหากนี่คือเบอร์ของคุณ กรุณาใช้ชื่อเดิมครับ`);
                     return;
                 }
                 currentCustomer = phoneData;
             } else if (nameData) {
-                // กรณีใส่ชื่อเดิม แต่เปลี่ยนไปใช้เบอร์อื่น
-                alert(`⚠️ ชื่อ "${name}" มีอยู่ในระบบแล้ว แต่ลงทะเบียนด้วยเบอร์อื่น\n\nกรุณาใช้เบอร์เดิมของคุณเพื่อสะสมแต้มต่อยอดเดิม\n(หรือตั้งชื่อให้แตกต่างหากคุณเป็นลูกค้าใหม่ครับ)`);
+                alert(`⚠️ ชื่อ "${name}" มีอยู่ในระบบแล้ว แต่ใช้เบอร์อื่น\n\nกรุณาใช้เบอร์เดิมสะสมแต้มต่อครับ`);
                 return;
             } else {
-                // กรณีเป็นลูกค้าใหม่จริงๆ (ชื่อใหม่ เบอร์ใหม่)
                 const { data: newUser, error: insErr } = await _sb.from('point_membership').insert([{ customer_name: name, phone: phone, points: 0 }]).select().single();
                 if (insErr) throw insErr;
                 currentCustomer = newUser;
-                alert('🎉 ลงทะเบียนสมาชิกใหม่สำเร็จ! เริ่มสะสมแต้มได้เลยครับ');
+                alert('🎉 ลงทะเบียนสมาชิกใหม่สำเร็จ!');
             }
 
             localStorage.setItem('mama_member_phone', phone);
@@ -144,7 +199,6 @@
         }
     }
 
-    // 3. แสดงหน้าบัตร
     function renderCard() {
         if(!currentCustomer) return;
         document.getElementById('login_section').style.display = 'none';
@@ -158,13 +212,12 @@
         }
     }
 
-    // 4. ส่งขอแต้มเข้า Telegram
     async function sendStampRequest() {
         const btn = document.getElementById('btn_request');
         btn.disabled = true; btn.innerText = 'ส่งคำขอแล้ว...';
 
-        const currentURL = window.location.href.split('?')[0];
-        const approveLink = `${currentURL}?approve=${currentCustomer.phone}`;
+        const baseURL = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
+        const approveLink = `${baseURL}approve.html?approve=${currentCustomer.phone}`;
         
         const msg = `⭐ ขอแต้มหน่อยจ้า!\n👤 ลูกค้า: ${currentCustomer.customer_name}\n📞 เบอร์: ${currentCustomer.phone}\nแต้มปัจจุบัน: ${currentCustomer.points}\n\n👉 กดอนุมัติที่นี่:\n${approveLink}`;
 
