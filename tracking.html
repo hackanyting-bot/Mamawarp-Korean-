@@ -123,8 +123,8 @@
 
         /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
-        .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; }
+        .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; min-width: 30%; }
         .admin-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #ddd; text-align: left; }
         .btn-group-admin { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px; }
         .btn-adm { padding: 10px 5px; border: none; border-radius: 8px; color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer; font-size: 0.85em; }
@@ -165,6 +165,7 @@
         <div class="admin-actions">
             <button class="btn-action" style="background:#ff9800;" onclick="clearDoneOrders()">🧹 ล้างที่เสร็จแล้ว</button>
             <button class="btn-action" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
+            <button class="btn-action" style="background:#555;" onclick="logoutAdmin()">🚪 ออกจากระบบ</button>
         </div>
         <div id="admin-order-list"></div>
     </div>
@@ -240,6 +241,15 @@
         if(!name) return "ลูกค้า";
         if(name.length <= 2) return name + "***";
         return name.substring(0, 2) + "***";
+    }
+
+    // 🟢 ฟังก์ชันออกจากระบบแอดมิน
+    function logoutAdmin() {
+        if(!confirm('ต้องการออกจากโหมดแอดมินใช่ไหม?')) return;
+        localStorage.removeItem('isMAMAWrapAdmin');
+        isAdminActive = false;
+        document.getElementById('admin-ui').style.display = 'none';
+        refreshOrders();
     }
 
     // 🟢 ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอผ่าน OneSignal
