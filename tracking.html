@@ -39,7 +39,6 @@
 
         h2 { color: var(--primary-color); margin-bottom: 20px; font-size: 1.5em; }
 
-        /* มอนิเตอร์คิวรวม */
         .queue-monitor {
             background: #fff3e0;
             border: 2px solid #ffcc80;
@@ -69,13 +68,11 @@
         .q-status-cooking { color: var(--warning-color); font-weight: bold; }
         .q-status-done { color: var(--success-color); font-weight: bold; }
 
-        /* ระบบแชท */
         .admin-msg-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 12px; border-radius: 12px; margin-top: 10px; color: #d32f2f; font-size: 0.9em; position: relative; text-align: left; }
         .customer-msg-box { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 12px; border-radius: 12px; margin-top: 10px; color: #2e7d32; font-size: 0.9em; text-align: right; }
         .chat-input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; font-family: 'Kanit'; box-sizing: border-box; }
         .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; font-weight: bold; }
 
-        /* รายการออเดอร์ */
         .order-item {
             background: #fff;
             border: 1px solid #eee;
@@ -101,7 +98,6 @@
         .customer-info { font-size: 0.9em; color: #666; margin-bottom: 5px; }
         .order-details { font-size: 1em; color: #333; font-weight: 400; line-height: 1.4; }
 
-        /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
         .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; }
@@ -118,6 +114,7 @@
 <body>
 
 <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
+<audio id="adminNotifySound" src="adminnotify.mp3" preload="auto"></audio>
 
 <div class="container">
     <div class="queue-monitor">
@@ -148,7 +145,7 @@
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v2.5</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v2.7</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -158,29 +155,48 @@
     const myName = localStorage.getItem('customerName') || "";
     let lastDataState = {};
     let soundUnlocked = false;
+    let isAdminActive = false;
 
-    // ระบบแอบปลดล็อกเสียงเงียบๆ ทันทีที่ลูกค้าสัมผัสหน้าจอ
+    // แอบปลดล็อกเสียงทั้ง 2 ไฟล์ ทันทีที่สัมผัสหน้าจอ
     function setupSilentUnlock() {
         const unlock = () => {
             if (soundUnlocked) return;
-            const audio = document.getElementById('notifySound');
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                soundUnlocked = true;
-                console.log("Audio Unlocked Silently");
-            }).catch(e => console.log("Waiting for user interaction..."));
+            const audio1 = document.getElementById('notifySound');
+            const audio2 = document.getElementById('adminNotifySound');
+            
+            const unlockAudio = (audio) => {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }).catch(e => console.log("Audio waiting..."));
+            };
+
+            unlockAudio(audio1);
+            unlockAudio(audio2);
+            soundUnlocked = true;
+            console.log("Both Audios Unlocked Silently");
         };
         window.addEventListener('click', unlock, { once: true });
         window.addEventListener('touchstart', unlock, { once: true });
     }
 
+    // เสียงแจ้งเตือนลูกค้า
     function playNotify() {
         if (soundUnlocked) {
             const audio = document.getElementById('notifySound');
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Notify blocked"));
+            audio.play().catch(e => console.log("Blocked"));
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }
+    }
+
+    // เสียงแจ้งเตือนแอดมิน
+    function playAdminNotify() {
+        if (soundUnlocked) {
+            const audio = document.getElementById('adminNotifySound');
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Blocked"));
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
         }
     }
 
@@ -203,22 +219,28 @@
             return true;
         });
 
-        // ตรวจสอบการแจ้งเตือน
         activeOrders.forEach(o => {
-            if (o.customer_name === myName) {
-                const prev = lastDataState[o.id];
-                if (prev) {
+            const prev = lastDataState[o.id];
+            if (prev) {
+                // ฝั่งลูกค้า (เสียง notify.mp3)
+                if (o.customer_name === myName) {
                     if ((prev.status === 'cooking' && o.status === 'done') || 
                         (o.call_trigger > (prev.call_trigger || 0)) ||
                         (o.admin_note !== prev.admin_note && o.admin_note !== "")) {
                         playNotify();
                     }
                 }
-                lastDataState[o.id] = o;
+                
+                // ฝั่ง Admin (เสียง adminnotify.mp3)
+                if (isAdminActive) {
+                    if (o.customer_note !== prev.customer_note && o.customer_note !== "") {
+                        playAdminNotify();
+                    }
+                }
             }
+            lastDataState[o.id] = o;
         });
 
-        // 1. คิวรวม
         let cookingCount = 0;
         let queueHTML = activeOrders.length === 0 ? '<div style="text-align:center; color:#999; padding:10px;">คิวว่างจ้า</div>' : "";
         activeOrders.forEach((o, index) => {
@@ -228,7 +250,6 @@
         document.getElementById('queue-count').innerText = cookingCount;
         document.getElementById('public-queue-list').innerHTML = queueHTML;
 
-        // 2. ออเดอร์ของฉัน
         const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
         const listDiv = document.getElementById('order-list');
         if (myOrders.length === 0) {
@@ -242,22 +263,21 @@
                     ${o.admin_note ? `<div class="admin-msg-box">🏠 <b>ร้านบอกว่า:</b> ${o.admin_note}</div>` : ''}
                     ${o.customer_note ? `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${o.customer_note}</div>` : ''}
                     <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
-                    <button class="btn-send-chat" onclick="sendReply('${o.id}', document.getElementById('rep_${o.id}').value)">ส่งข้อความตอบกลับ</button>
+                    <button class="btn-send-chat" onclick="sendReply('${o.id}')">ส่งข้อความตอบกลับ</button>
                 </div>
             `).join('');
         }
 
-        // 3. หลังบ้าน
-        if (document.getElementById('admin-ui').style.display === 'block') {
+        if (isAdminActive) {
             const adminList = document.getElementById('admin-order-list');
             adminList.innerHTML = [...activeOrders].reverse().map(o => `
                 <div class="admin-card" style="${o.customer_note ? 'border: 2px solid var(--success-color)' : ''}">
                     <strong>${o.customer_name}</strong>
                     <div style="font-size:0.8em; margin: 5px 0;">${o.order_details}</div>
                     ${o.customer_note ? `<div style="color:var(--success-color); font-weight:bold; margin: 5px 0;">🙋‍♂️ ลูกค้าตอบมา: ${o.customer_note}</div>` : ''}
-                    <input type="text" id="note_${o.id}" class="chat-input" placeholder="พิมพ์หาลูกค้า..." value="${o.admin_note || ''}">
+                    <input type="text" id="note_${o.id}" class="chat-input" placeholder="พิมพ์หาลูกค้า...">
                     <div class="btn-group">
-                        <button class="btn btn-cooking" style="background:var(--warning-color)" onclick="sendAdminNote('${o.id}', document.getElementById('note_${o.id}').value)">💬 ส่ง/เรียก</button>
+                        <button class="btn btn-cooking" style="background:var(--warning-color)" onclick="sendAdminNote('${o.id}')">💬 ส่ง/เรียก</button>
                         <button class="btn btn-done" onclick="updateStatus('${o.id}', 'done')">✅ เสร็จ</button>
                     </div>
                 </div>
@@ -265,15 +285,25 @@
         }
     }
 
-    async function sendAdminNote(id, msg) {
+    async function sendAdminNote(id) {
+        const inputField = document.getElementById(`note_${id}`);
+        const msg = inputField.value.trim();
+        if(!msg) return;
+
         const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
         await _supabase.from('orders').update({ admin_note: msg, call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
+        
+        inputField.value = ""; // เคลียร์ช่องพิมพ์ฝั่งแอดมิน
     }
 
-    async function sendReply(id, msg) {
+    async function sendReply(id) {
+        const inputField = document.getElementById(`rep_${id}`);
+        const msg = inputField.value.trim();
         if(!msg) return;
+
         await _supabase.from('orders').update({ customer_note: msg }).eq('id', id);
-        document.getElementById(`rep_${id}`).value = "";
+        
+        inputField.value = ""; // เคลียร์ช่องพิมพ์ฝั่งลูกค้า
     }
 
     async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
@@ -305,6 +335,7 @@
         timer = setTimeout(() => {
             if (prompt("รหัส:") === "0420") {
                 document.getElementById('admin-ui').style.display = 'block';
+                isAdminActive = true;
                 refreshOrders();
             }
         }, 2000);
