@@ -70,7 +70,7 @@
         .q-status-done { color: var(--success-color); font-weight: bold; }
 
         /* ระบบแชท */
-        .admin-msg-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 12px; border-radius: 12px; margin-top: 10px; color: #d32f2f; font-size: 0.9em; position: relative; }
+        .admin-msg-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 12px; border-radius: 12px; margin-top: 10px; color: #d32f2f; font-size: 0.9em; position: relative; text-align: left; }
         .customer-msg-box { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 12px; border-radius: 12px; margin-top: 10px; color: #2e7d32; font-size: 0.9em; text-align: right; }
         .chat-input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; font-family: 'Kanit'; box-sizing: border-box; }
         .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; font-weight: bold; }
@@ -101,38 +101,23 @@
         .customer-info { font-size: 0.9em; color: #666; margin-bottom: 5px; }
         .order-details { font-size: 1em; color: #333; font-weight: 400; line-height: 1.4; }
 
-        /* แถบแจ้งเตือนเล็กๆ (จะโชว์เฉพาะเครื่องที่ไม่เคยเปิดเสียง) */
-        #sound-hint {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 0.85em;
-            z-index: 9999;
-            pointer-events: none;
-            display: none;
-        }
-
+        /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
-        .admin-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; }
+        .admin-card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #ddd; text-align: left; }
         .btn-group { display: flex; gap: 8px; margin-top: 10px; }
         .btn { flex: 1; padding: 12px; border: none; border-radius: 10px; color: white; font-family: 'Kanit'; font-weight: 600; cursor: pointer; }
         .btn-cooking { background: var(--warning-color); }
         .btn-done { background: var(--success-color); }
 
         .back-link { text-decoration: none; color: white; background: #333; padding: 12px; border-radius: 10px; display: block; margin-top: 15px; font-weight: bold; text-align: center; }
-        #secret-trigger { margin-top: 60px; color: #ddd; font-size: 0.7em; padding: 20px; }
+        #secret-trigger { margin-top: 60px; color: #ddd; font-size: 0.7em; padding: 20px; user-select: none; -webkit-user-select: none; }
     </style>
 </head>
 <body>
 
 <audio id="notifySound" src="notify.mp3" preload="auto"></audio>
-
-<div id="sound-hint">🔔 แตะหน้าจอเพื่อเปิดเสียงแจ้งเตือน</div>
 
 <div class="container">
     <div class="queue-monitor">
@@ -153,11 +138,17 @@
 
     <div id="admin-ui">
         <h2 style="text-align:center; color:#333; margin-bottom: 10px;">👨‍🍳 ระบบหลังบ้าน & แชท</h2>
+        
+        <div class="admin-actions">
+            <button class="btn-action" style="background:#ff9800;" onclick="clearDoneOrders()">🧹 ล้างที่เสร็จแล้ว</button>
+            <button class="btn-action" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
+        </div>
+
         <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v2.4</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v2.5</div>
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -166,39 +157,29 @@
 
     const myName = localStorage.getItem('customerName') || "";
     let lastDataState = {};
-    let soundEnabled = false;
+    let soundUnlocked = false;
 
-    // ตรวจสอบว่าเครื่องนี้เคยอนุญาตเสียงหรือยัง
-    const hasPermission = localStorage.getItem('mama_sound_allowed') === 'true';
-
-    function initSoundSystem() {
-        // ถ้ายังไม่เคยอนุญาต ให้โชว์คำแนะนำเล็กๆ
-        if (!hasPermission) {
-            document.getElementById('sound-hint').style.display = 'block';
-        }
-
-        // ฟังการแตะหน้าจอครั้งแรกเพื่อปลดล็อกเสียง (ตามกฎ Browser)
-        window.addEventListener('click', unlockAudio, { once: true });
-        window.addEventListener('touchstart', unlockAudio, { once: true });
-    }
-
-    function unlockAudio() {
-        const audio = document.getElementById('notifySound');
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            soundEnabled = true;
-            localStorage.setItem('mama_sound_allowed', 'true');
-            document.getElementById('sound-hint').style.display = 'none';
-            console.log("Audio Unlocked Successfully");
-        }).catch(e => console.log("Audio unlock failed:", e));
+    // ระบบแอบปลดล็อกเสียงเงียบๆ ทันทีที่ลูกค้าสัมผัสหน้าจอ
+    function setupSilentUnlock() {
+        const unlock = () => {
+            if (soundUnlocked) return;
+            const audio = document.getElementById('notifySound');
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                soundUnlocked = true;
+                console.log("Audio Unlocked Silently");
+            }).catch(e => console.log("Waiting for user interaction..."));
+        };
+        window.addEventListener('click', unlock, { once: true });
+        window.addEventListener('touchstart', unlock, { once: true });
     }
 
     function playNotify() {
-        if (soundEnabled || hasPermission) {
+        if (soundUnlocked) {
             const audio = document.getElementById('notifySound');
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Autoplay blocked. User must tap screen first."));
+            audio.play().catch(e => console.log("Notify blocked"));
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         }
     }
@@ -222,7 +203,7 @@
             return true;
         });
 
-        // เช็คการแจ้งเตือน
+        // ตรวจสอบการแจ้งเตือน
         activeOrders.forEach(o => {
             if (o.customer_name === myName) {
                 const prev = lastDataState[o.id];
@@ -258,7 +239,7 @@
                     <span class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}</span>
                     <div class="customer-info">คุณ ${o.customer_name}</div>
                     <div style="font-size:1em; margin: 5px 0;">${o.order_details}</div>
-                    ${o.admin_note ? `<div class="admin-msg-box">🏠 <b>ร้านส่งข้อความ:</b> ${o.admin_note}</div>` : ''}
+                    ${o.admin_note ? `<div class="admin-msg-box">🏠 <b>ร้านบอกว่า:</b> ${o.admin_note}</div>` : ''}
                     ${o.customer_note ? `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${o.customer_note}</div>` : ''}
                     <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
                     <button class="btn-send-chat" onclick="sendReply('${o.id}', document.getElementById('rep_${o.id}').value)">ส่งข้อความตอบกลับ</button>
@@ -272,7 +253,7 @@
             adminList.innerHTML = [...activeOrders].reverse().map(o => `
                 <div class="admin-card" style="${o.customer_note ? 'border: 2px solid var(--success-color)' : ''}">
                     <strong>${o.customer_name}</strong>
-                    <div style="font-size:0.8em;">${o.order_details}</div>
+                    <div style="font-size:0.8em; margin: 5px 0;">${o.order_details}</div>
                     ${o.customer_note ? `<div style="color:var(--success-color); font-weight:bold; margin: 5px 0;">🙋‍♂️ ลูกค้าตอบมา: ${o.customer_note}</div>` : ''}
                     <input type="text" id="note_${o.id}" class="chat-input" placeholder="พิมพ์หาลูกค้า..." value="${o.admin_note || ''}">
                     <div class="btn-group">
@@ -297,6 +278,26 @@
 
     async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
 
+    async function clearDoneOrders() {
+        if(!confirm('ลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
+        try {
+            const { error } = await _supabase.from('orders').delete().eq('status', 'done');
+            if (error) throw error;
+            refreshOrders();
+        } catch(e) { alert("ลบไม่ได้: " + e.message); }
+    }
+
+    async function clearAllOrders() {
+        if(!confirm('⚠️ ล้างออเดอร์ทั้งหมดในระบบ?')) return;
+        try {
+            const { data } = await _supabase.from('orders').select('id');
+            if (data && data.length > 0) {
+                await _supabase.from('orders').delete().in('id', data.map(o => o.id));
+            }
+            refreshOrders();
+        } catch(e) { alert("ลบไม่ได้: " + e.message); }
+    }
+
     _supabase.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
     let timer;
@@ -310,7 +311,7 @@
     };
     document.getElementById('secret-trigger').onmouseup = document.getElementById('secret-trigger').ontouchend = () => clearTimeout(timer);
 
-    initSoundSystem();
+    setupSilentUnlock();
     refreshOrders();
 </script>
 </body>
