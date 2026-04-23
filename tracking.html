@@ -18,6 +18,7 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <script>
+      // ระบบแจ้งเตือน OneSignal
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
@@ -36,6 +37,7 @@
     </script>
 
     <style>
+        /* 4. CSS Variables & Global Styles */
         :root {
             --primary-color: #d32f2f;
             --success-color: #2e7d32;
@@ -44,6 +46,8 @@
             --bg-color: #f4f4f4;
             --admin-bubble: #fff3e0;
             --customer-bubble: #e8f5e9;
+            --text-dark: #333;
+            --text-light: #666;
         }
 
         body {
@@ -55,6 +59,7 @@
             flex-direction: column;
             align-items: center;
             -webkit-tap-highlight-color: transparent;
+            color: var(--text-dark);
         }
 
         .container {
@@ -62,6 +67,7 @@
             max-width: 480px;
         }
 
+        /* 5. UI Components Style */
         .card {
             background: white;
             padding: 25px;
@@ -71,7 +77,6 @@
             text-align: center;
         }
 
-        /* 🟢 ระบบแนะนำการตั้งค่าแจ้งเตือน */
         #pwa-guide {
             display: none;
             background: #fffde7;
@@ -82,12 +87,14 @@
             text-align: left;
             font-size: 0.9em;
         }
+
         .guide-step {
             margin-bottom: 10px;
             display: flex;
             align-items: flex-start;
             gap: 10px;
         }
+
         .step-num {
             background: #fbc02d;
             color: #000;
@@ -107,6 +114,7 @@
             font-size: 1.5em;
         }
 
+        /* 📊 Queue Style */
         .queue-monitor {
             background: #fff3e0;
             border: 2px solid #ffcc80;
@@ -134,65 +142,68 @@
             font-size: 0.95em;
         }
 
-        /* 🟢 แชทสไตล์ Messenger v3.3 */
+        /* 🟢 Chat System v3.4 (Messenger Style) */
         .chat-container {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            max-height: 350px;
+            gap: 10px;
+            max-height: 400px;
             overflow-y: auto;
-            padding: 10px;
+            padding: 15px;
             background: #fafafa;
-            border-radius: 15px;
+            border-radius: 20px;
             border: 1px solid #eee;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             scroll-behavior: smooth;
         }
 
         .msg-bubble {
             max-width: 85%;
-            padding: 10px 15px;
-            border-radius: 18px;
+            padding: 12px 16px;
+            border-radius: 20px;
             font-size: 0.95em;
-            line-height: 1.4;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         }
 
         .msg-admin {
             align-self: flex-start;
             background: var(--admin-bubble);
-            color: #d32f2f;
+            color: #b71c1c;
             border-bottom-left-radius: 4px;
         }
 
         .msg-customer {
             align-self: flex-end;
             background: var(--customer-bubble);
-            color: #2e7d32;
+            color: #1b5e20;
             border-bottom-right-radius: 4px;
             text-align: right;
         }
 
         .chat-img {
             max-width: 100%;
-            border-radius: 12px;
-            margin-top: 5px;
+            border-radius: 15px;
+            margin-top: 8px;
             cursor: pointer;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
             display: block;
         }
 
         .chat-audio {
             width: 100%;
-            height: 40px;
-            margin-top: 5px;
+            height: 45px;
+            margin-top: 8px;
+            border-radius: 25px;
         }
 
-        /* ส่วนกรอกข้อมูลแชท */
+        /* Input Control Area */
         .chat-input-area {
             background: #fff;
             border: 1px solid #ddd;
-            border-radius: 15px;
-            padding: 10px;
+            border-radius: 20px;
+            padding: 12px;
             margin-top: 10px;
         }
 
@@ -201,16 +212,16 @@
             border: none;
             outline: none;
             font-family: 'Kanit';
-            font-size: 1em;
-            padding: 8px 0;
+            font-size: 1.05em;
+            padding: 10px 0;
             border-bottom: 1px solid #eee;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             box-sizing: border-box;
         }
 
         .chat-button-group {
             display: flex;
-            gap: 5px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
@@ -219,72 +230,95 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            padding: 10px 5px;
+            gap: 8px;
+            padding: 12px 5px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             font-family: 'Kanit';
             font-weight: 600;
-            font-size: 0.85em;
+            font-size: 0.9em;
             color: white;
+            transition: 0.3s;
         }
 
-        .btn-img { background: #0288d1; }
-        .btn-voice { background: #555; }
-        .btn-voice.recording { background: #d32f2f; animation: blink 1s infinite; }
+        .btn-img { background: #0277bd; }
+        .btn-voice { background: #455a64; }
+        .btn-voice.recording { 
+            background: #d32f2f; 
+            animation: pulse-red 1.5s infinite; 
+        }
         .btn-send { background: var(--success-color); }
 
-        @keyframes blink { 50% { opacity: 0.5; } }
+        @keyframes pulse-red {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
         .order-item {
             background: white;
             border: 1px solid #eee;
             border-radius: 20px;
-            padding: 18px;
-            margin-bottom: 15px;
-            border-left: 8px solid var(--warning-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 10px solid var(--warning-color);
             text-align: left;
         }
 
         .order-item.status-done { border-left-color: var(--success-color); }
 
+        .status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .badge-cooking { background: #fff3e0; color: #e65100; }
+        .badge-done { background: #e8f5e9; color: #2e7d32; }
+
+        /* Admin UI Panel */
         #admin-ui {
             display: none;
             width: 100%;
-            border-top: 2px dashed #ccc;
-            padding-top: 20px;
+            border-top: 3px dashed #bbb;
+            padding-top: 30px;
+            margin-top: 30px;
         }
 
         .btn-adm-control {
-            padding: 12px;
+            padding: 15px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             color: white;
             font-family: 'Kanit';
             font-weight: bold;
             cursor: pointer;
+            font-size: 1em;
             flex: 1;
         }
 
         .back-link {
             text-decoration: none;
             color: white;
-            background: #333;
-            padding: 12px;
-            border-radius: 10px;
+            background: #222;
+            padding: 15px;
+            border-radius: 15px;
             display: block;
-            margin-top: 15px;
+            margin-top: 20px;
             text-align: center;
             font-weight: bold;
         }
 
         #secret-trigger {
-            margin-top: 60px;
-            color: #ddd;
+            margin-top: 80px;
+            color: #ccc;
             font-size: 0.7em;
-            padding: 20px;
+            padding: 30px;
             user-select: none;
+            text-align: center;
         }
     </style>
 </head>
@@ -295,47 +329,52 @@
 
 <div class="container">
     <div id="pwa-guide">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #d32f2f;">🚨 ตั้งค่าเพื่อรับแจ้งเตือน (สำคัญมาก!):</div>
+        <div style="font-weight: bold; margin-bottom: 12px; color: #d32f2f; font-size: 1.1em;">📣 แจ้งเตือนสเต็ปเทพลัดฟ้า:</div>
         <div class="guide-step">
             <div class="step-num">1</div>
             <div>กด <b>แชร์ (Share)</b> แล้วเลือก <b>"เพิ่มลงหน้าจอโฮม"</b></div>
         </div>
         <div class="guide-step">
             <div class="step-num">2</div>
-            <div>ไปที่การตั้งค่าโทรศัพท์ > การแจ้งเตือน > <b>เปิดสิทธิ์ "หน้าจอล็อก" (Lock Screen)</b></div>
+            <div>ตั้งค่ามือถือ > การแจ้งเตือน > <b>เปิด "หน้าจอล็อก" (Lock Screen)</b></div>
         </div>
         <div class="guide-step">
             <div class="step-num">3</div>
-            <div>ไปที่ข้อมูลแอป > แบตเตอรี่ > เลือก <b>"ไม่จำกัด" (Unrestricted)</b></div>
+            <div>ข้อมูลแอป > แบตเตอรี่ > เลือก <b>"ไม่จำกัด" (Unrestricted)</b></div>
         </div>
-        <button onclick="document.getElementById('pwa-guide').style.display='none'" style="width:100%; border:none; background:#ffeb3b; padding:10px; border-radius:10px; font-weight:bold;">ตั้งค่าเรียบร้อย!</button>
+        <button onclick="document.getElementById('pwa-guide').style.display='none'" style="width:100%; border:none; background:#ffeb3b; padding:12px; border-radius:12px; font-weight:bold; cursor:pointer;">รับทราบครับผม!</button>
     </div>
 
     <div class="queue-monitor">
-        <div class="queue-header">📊 คิวรวมหน้าร้าน (รอทำ: <span id="queue-count">0</span>)</div>
-        <div id="public-queue-list"></div>
+        <div class="queue-header">🕒 ตารางคิวปัจจุบัน (รอ: <span id="queue-count">0</span> คิว)</div>
+        <div id="public-queue-list">
+            <div style="text-align:center; padding:10px; color:#aaa;">กำลังดึงข้อมูลคิว...</div>
+        </div>
     </div>
 
     <div id="customer-ui" class="card">
-        <h2>📍 ติดตามออเดอร์ของฉัน</h2>
-        <div id="order-list">กำลังโหลดข้อมูล...</div>
-        <a href="index.html" class="back-link">← กลับหน้าสั่งอาหาร</a>
+        <h2>🍔 ติดตามคิว MAMA WRAP</h2>
+        <div id="order-list">กำลังตรวจสอบออเดอร์...</div>
+        <a href="index.html" class="back-link">← สั่งอาหารเพิ่ม</a>
     </div>
 
     <div id="admin-ui">
-        <h2 style="text-align:center;">👨‍🍳 ระบบหลังบ้าน MAMA WRAP</h2>
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <button class="btn-adm-control" style="background:#555;" onclick="logoutAdmin()">🚪 ออกจากระบบ</button>
-            <button class="btn-adm-control" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างคิวทั้งหมด</button>
+        <h2 style="text-align:center;">👨‍🍳 หลังบ้านจัดการคิว</h2>
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn-adm-control" style="background:#444;" onclick="logoutAdmin()">🚪 ออก</button>
+            <button class="btn-adm-control" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
         </div>
         <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v3.3 (Master)</div>
+<div id="secret-trigger">MAMA WRAP V3.4 (ANDROID FIX MASTER)</div>
 <input type="file" id="file-input" style="display:none;" accept="image/*">
 
 <script>
+    // ---------------------------------------------------------
+    // 1. CONFIGURATIONS
+    // ---------------------------------------------------------
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob21ycGVpY2h2aGFiYXNsc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjU5NjksImV4cCI6MjA5MDA0MTk2OX0.jC122_jMSTIh7kcRNCBxfR_OcPQYfjByMzdnoz6Qa_s';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -346,18 +385,17 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    // เช็คโหมด PWA
+    // เช็คสิทธิ์การใช้งานแอป
     if (!window.matchMedia('(display-mode: standalone)').matches) {
         document.getElementById('pwa-guide').style.display = 'block';
     }
 
-    // เช็คสถานะแอดมิน
     let isAdminActive = localStorage.getItem('isMAMAWrapAdmin') === 'true';
-    if (isAdminActive) {
-        document.getElementById('admin-ui').style.display = 'block';
-    }
+    if (isAdminActive) document.getElementById('admin-ui').style.display = 'block';
 
-    // ปลดล็อกเสียงเรียก
+    // ---------------------------------------------------------
+    // 2. AUDIO & NOTIFICATION SYSTEMS
+    // ---------------------------------------------------------
     function setupSilentUnlock() {
         const unlock = () => {
             if (soundUnlocked) return;
@@ -379,60 +417,72 @@
     async function triggerPushNotification(title, message) {
         try {
             await _supabase.from('push_queue').insert([{ title: title, message: message }]);
-        } catch(e) { console.log("Push Error"); }
+        } catch(e) { console.error("Notification Push Failed"); }
     }
 
-    // 🟢 แก้ไข: Logic ตรวจจับไฟล์รูปและเสียงให้แม่นยำ (รองรับ Supabase Token)
+    // 🔴 แก้ไข: ฟังก์ชันตรวจจับเนื้อหา (Android Compatible)
     function renderChatContent(text) {
         if (typeof text !== 'string') return text;
+        const isUrl = text.includes('supabase.co/storage/v1/object/public');
         
-        const isSupabaseUrl = text.includes('supabase.co/storage/v1/object/public');
-        
-        if (isSupabaseUrl) {
-            // ตรวจสอบรูปภาพ
-            if (text.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|svg)/) || text.includes('img_')) {
+        if (isUrl) {
+            const lowerText = text.toLowerCase();
+            // เช็คว่าเป็นรูปภาพหรือไม่
+            if (lowerText.match(/\.(jpeg|jpg|gif|png|webp|svg)/) || text.includes('img_')) {
                 return `<img src="${text}" class="chat-img" onclick="window.open(this.src)">`;
             } 
-            // ตรวจสอบไฟล์เสียง
-            if (text.toLowerCase().match(/\.(webm|mp3|wav|m4a|ogg)/) || text.includes('voice_')) {
-                return `<audio controls class="chat-audio" src="${text}"></audio>`;
+            // เช็คว่าเป็นเสียงหรือไม่ (เพิ่ม type กรอง Android)
+            if (lowerText.match(/\.(webm|mp3|wav|m4a|ogg)/) || text.includes('voice_')) {
+                return `
+                    <div class="audio-wrapper">
+                        <audio controls class="chat-audio" preload="metadata">
+                            <source src="${text}" type="audio/webm">
+                            <source src="${text}" type="audio/mp3">
+                            <source src="${text}" type="audio/mpeg">
+                            เบราว์เซอร์ไม่รองรับการเล่นเสียง
+                        </audio>
+                    </div>`;
             }
         }
         return text;
     }
 
-    // ระบบอัปโหลดไฟล์
+    // ---------------------------------------------------------
+    // 3. FILE & VOICE PROCESSING
+    // ---------------------------------------------------------
     async function uploadFile(file, prefix = 'img') {
         const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file);
+        // ระบุ MIME Type ให้ชัดเจนเพื่อ Android
+        const options = prefix === 'voice' ? { contentType: 'audio/webm' } : {};
+        
+        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file, options);
         if (error) {
-            alert('อัปโหลดไฟล์ไม่สำเร็จ!');
+            alert('ล้มเหลว! กรุณาลองใหม่');
             return null;
         }
         const { data: { publicUrl } } = _supabase.storage.from('chat-attachments').getPublicUrl(fileName);
         return publicUrl;
     }
 
-    // ระบบอัดเสียง
     async function toggleVoice(id, type) {
         const btn = document.getElementById(`btn-voice-${id}`);
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                // บังคับ Codec เป็น opus เพื่อให้ Android เล่นได้เสถียรขึ้น
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                                 ? 'audio/webm;codecs=opus' : 'audio/webm';
+                                 
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
                 audioChunks = [];
                 
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
                 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     const url = await uploadFile(audioBlob, 'voice');
                     if (url) {
-                        if (type === 'admin') {
-                            sendAdminNote(id, url);
-                        } else {
-                            sendReply(id, myName, url);
-                        }
+                        type === 'admin' ? sendAdminNote(id, url) : sendReply(id, myName, url);
                     }
                     btn.classList.remove('recording');
                     btn.innerHTML = `<i class="fa-solid fa-microphone"></i> เสียง`;
@@ -441,15 +491,12 @@
                 mediaRecorder.start();
                 btn.classList.add('recording');
                 btn.innerHTML = `<i class="fa-solid fa-stop"></i> หยุดอัด`;
-            } catch(e) {
-                alert('กรุณาอนุญาตการใช้ไมโครโฟน');
-            }
+            } catch(e) { alert('ต้องการสิทธิ์เข้าถึงไมโครโฟนครับ'); }
         } else {
             mediaRecorder.stop();
         }
     }
 
-    // ระบบเลือกรูป
     function triggerImage(id, type) {
         const input = document.getElementById('file-input');
         input.onchange = async (e) => {
@@ -457,24 +504,22 @@
             if (file) {
                 const url = await uploadFile(file, 'img');
                 if (url) {
-                    if (type === 'admin') {
-                        sendAdminNote(id, url);
-                    } else {
-                        sendReply(id, myName, url);
-                    }
+                    type === 'admin' ? sendAdminNote(id, url) : sendReply(id, myName, url);
                 }
             }
         };
         input.click();
     }
 
+    // ---------------------------------------------------------
+    // 4. CORE REFRESH & RENDER LOGIC (FULL - NO SHORTCUTS)
+    // ---------------------------------------------------------
     function maskName(name) {
         if(!name) return "ลูกค้า";
         if(name.length <= 2) return name + "***";
         return name.substring(0, 2) + "***";
     }
 
-    // ฟังก์ชันหลักในการวาดหน้าจอ (ห้ามตัดทอน)
     async function refreshOrders() {
         const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: true });
         if (error) return;
@@ -487,7 +532,7 @@
             return true;
         });
 
-        // ตรวจสอบการแจ้งเตือน
+        // แจ้งเตือนลูกค้าและแอดมิน
         activeOrders.forEach(o => {
             const prev = lastDataState[o.id];
             if (prev) {
@@ -502,38 +547,38 @@
             lastDataState[o.id] = o;
         });
 
-        // 1. วาดคิวรวม
+        // เรนเดอร์คิวรวม
         let cookingCount = 0;
-        let queueHTML = activeOrders.length === 0 ? '<div style="text-align:center; color:#999; padding:10px;">ไม่มีคิวจ้า</div>' : "";
+        let queueHTML = activeOrders.length === 0 ? '<div style="text-align:center; color:#999; padding:20px;">ตอนนี้ยังไม่มีออเดอร์จ้า</div>' : "";
         activeOrders.forEach((o, index) => {
             if (o.status === 'cooking') cookingCount++;
             queueHTML += `
                 <div class="queue-row">
                     <b>คิวที่ ${index+1} - คุณ ${maskName(o.customer_name)}</b>
-                    <span style="color:${o.status==='done'?'green':'orange'}; font-weight:bold;">
-                        ${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}
+                    <span style="color:${o.status==='done'?'#2e7d32':'#ef6c00'}; font-weight:600;">
+                        ${o.status==='done'?'✅ รับได้แล้ว':'👨‍🍳 กำลังเตรียม'}
                     </span>
                 </div>`;
         });
         document.getElementById('queue-count').innerText = cookingCount;
         document.getElementById('public-queue-list').innerHTML = queueHTML;
 
-        // 2. วาดออเดอร์ของฉัน (ฝั่งลูกค้า)
+        // เรนเดอร์ออเดอร์ลูกค้า
         const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
         const listDiv = document.getElementById('order-list');
         if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุด</p>`;
+            listDiv.innerHTML = `<p style="color:#999; margin: 20px 0;">ไม่พบข้อมูลออเดอร์ล่าสุดครับ</p>`;
         } else {
             listDiv.innerHTML = myOrders.map(o => {
                 let chatLog = [];
-                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) {}
+                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) { chatLog = []; }
                 
                 return `
                     <div class="order-item ${o.status==='done' ? 'status-done' : ''}">
-                        <span class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">
-                            ${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}
-                        </span>
-                        <div style="font-weight:bold; margin-bottom:10px;">${o.order_details}</div>
+                        <div class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">
+                            ${o.status==='done'?'✅ เสร็จแล้วจ้า':'👨‍🍳 รอสักครู่นะครับ'}
+                        </div>
+                        <div style="font-weight:600; margin-bottom:10px; font-size:1.1em;">${o.order_details}</div>
                         
                         <div class="chat-container">
                             ${chatLog.map(c => `
@@ -544,16 +589,17 @@
                         </div>
 
                         <div class="chat-input-area">
-                            <input type="text" id="rep_${o.id}" class="chat-text-input" placeholder="พิมพ์ข้อความคุยกับร้าน..." onkeypress="if(event.key==='Enter') sendReply('${o.id}', '${myName}')">
+                            <input type="text" id="rep_${o.id}" class="chat-text-input" placeholder="แชทถามร้าน หรือส่งสลิป..." 
+                                   onkeypress="if(event.key==='Enter') sendReply('${o.id}', '${myName}')">
                             <div class="chat-button-group">
                                 <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'customer')">
-                                    <i class="fa-solid fa-camera"></i> รูป/สลิป
+                                    <i class="fa-solid fa-camera"></i> รูปภาพ
                                 </button>
                                 <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'customer')">
                                     <i class="fa-solid fa-microphone"></i> เสียง
                                 </button>
                                 <button class="btn-chat-action btn-send" onclick="sendReply('${o.id}', '${myName}')">
-                                    <i class="fa-solid fa-paper-plane"></i> ส่งแชท
+                                    <i class="fa-solid fa-paper-plane"></i> ส่ง
                                 </button>
                             </div>
                         </div>
@@ -562,17 +608,17 @@
             }).join('');
         }
 
-        // 3. วาดหลังบ้าน (ฝั่งแอดมิน)
+        // เรนเดอร์หลังบ้านแอดมิน
         if (isAdminActive) {
             const adminList = document.getElementById('admin-order-list');
             adminList.innerHTML = [...activeOrders].reverse().map(o => {
                 let chatLog = [];
-                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) {}
+                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) { chatLog = []; }
                 
                 return `
                     <div class="order-item" style="border-left-color: #333;">
-                        <b>คุณ ${o.customer_name}</b> [สถานะ: ${o.status}]
-                        <div style="font-size:0.85em; margin-bottom:10px; color:#666;">${o.order_details}</div>
+                        <b style="font-size:1.1em;">คุณ ${o.customer_name}</b>
+                        <div style="font-size:0.85em; margin: 5px 0 15px; color:#666;">เมนู: ${o.order_details}</div>
                         
                         <div class="chat-container">
                             ${chatLog.map(c => `
@@ -583,13 +629,14 @@
                         </div>
 
                         <div class="chat-input-area">
-                            <input type="text" id="note_${o.id}" class="chat-text-input" placeholder="ตอบกลับลูกค้า..." onkeypress="if(event.key==='Enter') sendAdminNote('${o.id}')">
+                            <input type="text" id="note_${o.id}" class="chat-text-input" placeholder="ตอบลูกค้า..." 
+                                   onkeypress="if(event.key==='Enter') sendAdminNote('${o.id}')">
                             <div class="chat-button-group">
                                 <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'admin')">
                                     <i class="fa-solid fa-camera"></i> ส่งรูป
                                 </button>
                                 <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'admin')">
-                                    <i class="fa-solid fa-microphone"></i> เสียง
+                                    <i class="fa-solid fa-microphone"></i> ส่งเสียง
                                 </button>
                                 <button class="btn-chat-action btn-send" onclick="sendAdminNote('${o.id}')">
                                     <i class="fa-solid fa-paper-plane"></i> แชท
@@ -597,34 +644,33 @@
                             </div>
                         </div>
                         
-                        <div style="display:flex; gap:5px; margin-top:10px;">
-                            <button class="btn-adm-control" style="background:var(--warning-color)" onclick="callCustomer('${o.id}')">🔔 เรียกรับอาหาร</button>
-                            <button class="btn-adm-control" style="background:var(--success-color)" onclick="updateStatus('${o.id}', 'done')">✅ ทำเสร็จแล้ว</button>
+                        <div style="display:flex; gap:8px; margin-top:15px;">
+                            <button class="btn-adm-control" style="background:var(--warning-color)" onclick="callCustomer('${o.id}')">🔔 เรียกรับ</button>
+                            <button class="btn-adm-control" style="background:var(--success-color)" onclick="updateStatus('${o.id}', 'done')">✅ เสร็จ</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
         
-        // เลื่อนแชทลงล่างสุด
-        document.querySelectorAll('.chat-container').forEach(el => {
-            el.scrollTop = el.scrollHeight;
-        });
+        // Auto Scroll แชทลงล่างสุด
+        document.querySelectorAll('.chat-container').forEach(el => { el.scrollTop = el.scrollHeight; });
     }
 
+    // ---------------------------------------------------------
+    // 5. DATA SENDING & DATABASE OPERATIONS
+    // ---------------------------------------------------------
     async function sendAdminNote(id, fileUrl = null) {
         const input = document.getElementById(`note_${id}`);
         const msg = fileUrl || input.value.trim();
         if(!msg) return;
 
         const { data } = await _supabase.from('orders').select('admin_note').eq('id', id).single();
-        let chatLog = [];
-        try { chatLog = JSON.parse(data.admin_note) || []; } catch(e) {}
-        
+        let chatLog = JSON.parse(data.admin_note) || [];
         chatLog.push({ sender: 'admin', text: msg });
         
         await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog) }).eq('id', id);
-        triggerPushNotification("MAMA WRAP", fileUrl ? "📷 ส่งรูปภาพ/เสียงให้คุณ" : "🏠 ร้านแชทมา: " + msg);
+        triggerPushNotification("MAMA WRAP", fileUrl ? "📷 ร้านส่งไฟล์ให้คุณ!" : "🏠 ร้านตอบแชท: " + msg);
         if(!fileUrl) input.value = "";
         refreshOrders();
     }
@@ -635,17 +681,15 @@
         if(!msg) return;
 
         const { data } = await _supabase.from('orders').select('admin_note').eq('id', id).single();
-        let chatLog = [];
-        try { chatLog = JSON.parse(data.admin_note) || []; } catch(e) {}
-        
+        let chatLog = JSON.parse(data.admin_note) || [];
         chatLog.push({ sender: 'customer', text: msg });
         
         await _supabase.from('orders').update({ 
             admin_note: JSON.stringify(chatLog), 
-            customer_note: (fileUrl ? "[ส่งไฟล์]" : msg) 
+            customer_note: (fileUrl ? "[ไฟล์แนบ]" : msg) 
         }).eq('id', id);
         
-        triggerPushNotification("Admin MAMA WRAP", `🙋‍♂️ คุณ ${cusName} ส่งแชทมา: ${fileUrl ? '[ไฟล์]' : msg}`);
+        triggerPushNotification("Admin MAMA WRAP", `🙋‍♂️ ${cusName} ตอบแชท: ${fileUrl ? '[ไฟล์แนบ]' : msg}`);
         if(!fileUrl) input.value = "";
         refreshOrders();
     }
@@ -653,35 +697,39 @@
     async function callCustomer(id) {
         const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
         await _supabase.from('orders').update({ call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
-        triggerPushNotification("MAMA WRAP", "🔔 ร้านเรียกรับอาหารครับ!");
+        triggerPushNotification("MAMA WRAP", "🔔 ร้านเรียกรับอาหารแล้วจ้า!");
     }
 
     async function updateStatus(id, s) { 
         await _supabase.from('orders').update({ status: s }).eq('id', id); 
-        if (s === 'done') triggerPushNotification("MAMA WRAP", "✅ อาหารของคุณเสร็จแล้วครับ!");
+        if (s === 'done') triggerPushNotification("MAMA WRAP", "✅ อาหารของคุณทำเสร็จแล้วครับ!");
         refreshOrders(); 
     }
 
     function logoutAdmin() {
-        localStorage.removeItem('isMAMAWrapAdmin');
-        location.reload();
+        if(confirm('ต้องการออกจากแอดมิน?')) {
+            localStorage.removeItem('isMAMAWrapAdmin');
+            location.reload();
+        }
     }
 
     async function clearAllOrders() {
-        if(confirm('ล้างออเดอร์ทั้งหมดในระบบ?')) {
+        if(confirm('⚠️ คำเตือน: ล้างออเดอร์ทั้งหมดในระบบ?')) {
             await _supabase.from('orders').delete().neq('id', 0);
             refreshOrders();
         }
     }
 
-    // Realtime Database
-    _supabase.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
+    // ---------------------------------------------------------
+    // 6. INITIALIZATION & REALTIME
+    // ---------------------------------------------------------
+    _supabase.channel('orders-live').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
-    // ระบบทางลับแอดมิน
+    // ระบบทางลับ Admin (กดค้าง 2 วิที่เวอร์ชัน)
     let timer;
     document.getElementById('secret-trigger').onmousedown = document.getElementById('secret-trigger').ontouchstart = () => {
         timer = setTimeout(() => {
-            if (prompt("รหัสผ่านแอดมิน:") === "0420") {
+            if (prompt("รหัสผ่านลับแอดมิน:") === "0420") {
                 localStorage.setItem('isMAMAWrapAdmin', 'true');
                 location.reload();
             }
@@ -689,6 +737,7 @@
     };
     document.getElementById('secret-trigger').onmouseup = document.getElementById('secret-trigger').ontouchend = () => clearTimeout(timer);
 
+    // เริ่มทำงาน
     setupSilentUnlock();
     refreshOrders();
 </script>
