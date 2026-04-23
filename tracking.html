@@ -113,7 +113,7 @@
         .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: bold; }
         
         .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; border: 1px solid #ddd; }
-        .chat-audio { width: 100%; margin-top: 5px; height: 35px; }
+        .chat-audio { width: 100%; margin-top: 5px; height: 40px; min-height: 40px; }
 
         .order-item {
             background: #fff;
@@ -201,7 +201,7 @@
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v2.9</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v3.0</div>
 
 <input type="file" id="file-input" style="display:none;" accept="image/*">
 
@@ -272,7 +272,7 @@
         if (text.startsWith('http') && (text.match(/\.(jpeg|jpg|gif|png|webp)$/) != null)) {
             return `<img src="${text}" class="chat-img" onclick="window.open(this.src)">`;
         } else if (text.startsWith('http') && (text.match(/\.(webm|mp3|wav|m4a|ogg)$/) != null)) {
-            return `<audio controls class="chat-audio" src="${text}"></audio>`;
+            return `<audio controls preload="metadata" class="chat-audio" src="${text}"></audio>`;
         }
         return text;
     }
@@ -290,21 +290,24 @@
         return null;
     }
 
-    // 🟢 ใหม่: ฟังก์ชันอัปโหลดไฟล์ (รูป/เสียง) ไปที่ Supabase Storage
+    // 🟢 แก้ไข: ระบุ contentType ให้ Supabase และ Chrome Android
     async function uploadFile(file, prefix = 'img') {
         const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file);
+        // ระบุ Content Type ให้ชัดเจน
+        const options = prefix === 'voice' ? { contentType: 'audio/webm' } : {};
+        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file, options);
         if (error) { alert('อัปโหลดไฟล์ไม่สำเร็จ!'); return null; }
         const { data: { publicUrl } } = _supabase.storage.from('chat-attachments').getPublicUrl(fileName);
         return publicUrl;
     }
 
-    // 🟢 ใหม่: ระบบอัดเสียง
+    // 🟢 แก้ไข: บังคับ Codec ให้รองรับ Android 100%
     async function toggleVoice(id, type) {
         const btn = document.getElementById(`btn-voice-${id}`);
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            // บังคับ Codec Opus เพื่อความเสถียรบนมือถือ
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
             audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = async () => {
