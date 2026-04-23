@@ -18,20 +18,12 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     
     <script>
-      // OneSignal Notification Setup
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "df78d0a1-1073-4072-b6d4-dd65f1842dc4",
           serviceWorkerPath: "sw.js",
-          notifyButton: {
-            enable: true,
-            displayPredicate: () => true,
-            colors: {
-                'circle.background': '#d32f2f',
-                'circle.foreground': 'white',
-            }
-          },
+          notifyButton: { enable: true },
         });
       });
     </script>
@@ -40,303 +32,77 @@
         :root {
             --primary-color: #d32f2f;
             --success-color: #2e7d32;
-            --delivery-color: #0288d1;
-            --warning-color: #ef6c00;
             --bg-color: #f4f4f4;
             --admin-bubble: #fff3e0;
             --customer-bubble: #e8f5e9;
         }
 
-        body {
-            font-family: 'Kanit', sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { font-family: 'Kanit', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 480px; }
 
-        .container {
-            width: 100%;
-            max-width: 480px;
-        }
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        h2 { color: var(--primary-color); margin-bottom: 15px; }
 
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-            margin-bottom: 20px;
-            text-align: center;
-        }
+        .queue-monitor { background: #fff3e0; border: 2px solid #ffcc80; border-radius: 15px; padding: 15px; margin-bottom: 20px; text-align: left; }
+        .queue-header { font-size: 1.1em; color: #d32f2f; font-weight: bold; text-align: center; border-bottom: 1px dashed #ffcc80; padding-bottom: 8px; margin-bottom: 10px; }
+        .queue-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ffe0b2; font-size: 0.9em; }
 
-        /* 🟢 Guide สำหรับการตั้งค่า Android */
-        #pwa-guide {
-            display: none;
-            background: #fffde7;
-            border: 2px solid #fbc02d;
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-size: 0.9em;
-        }
-        .guide-step {
-            margin-bottom: 10px;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        .step-num {
-            background: #fbc02d;
-            color: #000;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
+        .chat-container { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; padding: 10px; background: #fafafa; border-radius: 15px; border: 1px solid #eee; margin-bottom: 10px; }
+        .msg-bubble { max-width: 85%; padding: 8px 12px; border-radius: 15px; font-size: 0.9em; line-height: 1.4; }
+        .msg-admin { align-self: flex-start; background: var(--admin-bubble); color: #d32f2f; }
+        .msg-customer { align-self: flex-end; background: var(--customer-bubble); color: #2e7d32; }
 
-        h2 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
+        .chat-audio { width: 100%; height: 40px; margin-top: 5px; }
 
-        .queue-monitor {
-            background: #fff3e0;
-            border: 2px solid #ffcc80;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .queue-header {
-            font-size: 1.2em;
-            color: #d32f2f;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 10px;
-            border-bottom: 2px dashed #ffcc80;
-            padding-bottom: 10px;
-        }
-
-        .queue-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 5px;
-            border-bottom: 1px solid #ffe0b2;
-            font-size: 0.95em;
-        }
-
-        /* 🟢 Chat System v3.5 (Fixed Audio) */
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 380px;
-            overflow-y: auto;
-            padding: 10px;
-            background: #fafafa;
-            border-radius: 15px;
-            border: 1px solid #eee;
-            margin-bottom: 10px;
-            scroll-behavior: smooth;
-        }
-
-        .msg-bubble {
-            max-width: 85%;
-            padding: 10px 15px;
-            border-radius: 18px;
-            font-size: 0.95em;
-            line-height: 1.4;
-        }
-
-        .msg-admin {
-            align-self: flex-start;
-            background: var(--admin-bubble);
-            color: #d32f2f;
-            border-bottom-left-radius: 4px;
-        }
-
-        .msg-customer {
-            align-self: flex-end;
-            background: var(--customer-bubble);
-            color: #2e7d32;
-            border-bottom-right-radius: 4px;
-            text-align: right;
-        }
-
-        .chat-img {
-            max-width: 100%;
-            border-radius: 12px;
-            margin-top: 5px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            display: block;
-        }
-
-        /* 🟢 แก้ไข: บังคับขนาด Audio ให้ Android ไม่ยุบตัว */
-        .chat-audio {
-            width: 100%;
-            height: 45px;
-            min-height: 45px;
-            margin-top: 5px;
-            display: block;
-            border-radius: 30px;
-        }
-
-        .chat-input-area {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 15px;
-            padding: 10px;
-            margin-top: 10px;
-        }
-
-        .chat-text-input {
-            width: 100%;
-            border: none;
-            outline: none;
-            font-family: 'Kanit';
-            font-size: 1em;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-
-        .chat-button-group {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-
-        .btn-chat-action {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 5px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: 'Kanit';
-            font-weight: 600;
-            font-size: 0.85em;
-            color: white;
-        }
-
+        .chat-input-area { background: #fff; border: 1px solid #ddd; border-radius: 15px; padding: 10px; }
+        .chat-text-input { width: 100%; border: none; outline: none; font-family: 'Kanit'; font-size: 1em; padding: 8px 0; border-bottom: 1px solid #eee; margin-bottom: 10px; }
+        
+        .chat-button-group { display: flex; gap: 5px; }
+        .btn-chat-action { flex: 1; padding: 10px 5px; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; font-size: 0.8em; }
         .btn-img { background: #0288d1; }
         .btn-voice { background: #555; }
-        .btn-voice.recording { background: #d32f2f; animation: blink 1s infinite; }
+        .btn-voice.recording { background: #d32f2f; }
         .btn-send { background: var(--success-color); }
 
-        @keyframes blink { 50% { opacity: 0.5; } }
+        .order-item { background: white; border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 15px; border-left: 6px solid var(--primary-color); text-align: left; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 10px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; background: #eee; }
 
-        .order-item {
-            background: white;
-            border: 1px solid #eee;
-            border-radius: 20px;
-            padding: 18px;
-            margin-bottom: 15px;
-            border-left: 8px solid var(--warning-color);
-            text-align: left;
-        }
-
-        .order-item.status-done { border-left-color: var(--success-color); }
-
-        #admin-ui {
-            display: none;
-            width: 100%;
-            border-top: 2px dashed #ccc;
-            padding-top: 20px;
-        }
-
-        .btn-adm-control {
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-family: 'Kanit';
-            font-weight: bold;
-            cursor: pointer;
-            flex: 1;
-        }
-
-        .back-link {
-            text-decoration: none;
-            color: white;
-            background: #333;
-            padding: 12px;
-            border-radius: 10px;
-            display: block;
-            margin-top: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        #secret-trigger {
-            margin-top: 60px;
-            color: #ddd;
-            font-size: 0.7em;
-            padding: 20px;
-            user-select: none;
-        }
+        #admin-ui { display: none; width: 100%; margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 20px; }
+        .btn-adm-control { padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; flex: 1; margin-top: 5px; }
+        
+        .back-link { text-decoration: none; color: white; background: #333; padding: 12px; border-radius: 10px; display: block; margin-top: 15px; text-align: center; }
+        #secret-trigger { margin-top: 50px; color: #ddd; font-size: 0.7em; padding: 20px; cursor: default; }
     </style>
 </head>
 <body>
 
-<audio id="orderDoneSound" src="orderdone.mp3" preload="auto"></audio>
-<audio id="msgNotifySound" src="notify.mp3" preload="auto"></audio>
+<audio id="orderDoneSound" src="orderdone.mp3"></audio>
+<audio id="msgNotifySound" src="notify.mp3"></audio>
 
 <div class="container">
-    <div id="pwa-guide">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #d32f2f;">🚨 ตั้งค่าเพื่อรับแจ้งเตือน (สำคัญมาก!):</div>
-        <div class="guide-step">
-            <div class="step-num">1</div>
-            <div>กด <b>แชร์ (Share)</b> แล้วเลือก <b>"เพิ่มลงหน้าจอโฮม"</b></div>
-        </div>
-        <div class="guide-step">
-            <div class="step-num">2</div>
-            <div>ไปที่การตั้งค่าโทรศัพท์ > การแจ้งเตือน > <b>เปิดสิทธิ์ "หน้าจอล็อก" (Lock Screen)</b></div>
-        </div>
-        <div class="guide-step">
-            <div class="step-num">3</div>
-            <div>ไปที่ข้อมูลแอป > แบตเตอรี่ > เลือก <b>"ไม่จำกัด" (Unrestricted)</b></div>
-        </div>
-        <button onclick="document.getElementById('pwa-guide').style.display='none'" style="width:100%; border:none; background:#ffeb3b; padding:10px; border-radius:10px; font-weight:bold;">ตั้งค่าเสร็จแล้ว!</button>
-    </div>
-
     <div class="queue-monitor">
-        <div class="queue-header">📊 คิวรวมหน้าแอป (รอทำ: <span id="queue-count">0</span>)</div>
+        <div class="queue-header">📊 ลำดับคิว (รอทำ: <span id="queue-count">0</span>)</div>
         <div id="public-queue-list"></div>
     </div>
 
     <div id="customer-ui" class="card">
-        <h2>📍 ออเดอร์ของฉัน</h2>
+        <h2>📍 ติดตามออเดอร์</h2>
         <div id="order-list">กำลังโหลดข้อมูล...</div>
-        <a href="index.html" class="back-link">← กลับหน้าสั่งอาหาร</a>
+        <a href="index.html" class="back-link">← กลับไปหน้าสั่งอาหาร</a>
     </div>
 
     <div id="admin-ui">
-        <h2 style="text-align:center;">👨‍🍳 ระบบหลังบ้าน MAMA WRAP</h2>
+        <h2 style="text-align:center;">👨‍🍳 หลังบ้าน & แชท</h2>
         <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <button class="btn-adm-control" style="background:#555;" onclick="logoutAdmin()">🚪 ออกจากระบบ</button>
-            <button class="btn-adm-control" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างคิวทั้งหมด</button>
+            <button class="btn-adm-control" style="background:#555;" onclick="logoutAdmin()">🚪 ออก</button>
+            <button class="btn-adm-control" style="background:#d32f2f;" onclick="clearAllOrders()">🗑️ ล้างทั้งหมด</button>
         </div>
         <div id="admin-order-list"></div>
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v3.5 (ANDROID AUDIO FIXED)</div>
+<div id="secret-trigger">MAMA WRAP v3.6 - MASTER FIXED</div>
 <input type="file" id="file-input" style="display:none;" accept="image/*">
 
 <script>
@@ -350,360 +116,175 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    // เช็คโหมด PWA
-    if (!window.matchMedia('(display-mode: standalone)').matches) {
-        document.getElementById('pwa-guide').style.display = 'block';
-    }
-
-    // เช็คสถานะแอดมิน
     let isAdminActive = localStorage.getItem('isMAMAWrapAdmin') === 'true';
-    if (isAdminActive) {
-        document.getElementById('admin-ui').style.display = 'block';
-    }
+    if (isAdminActive) document.getElementById('admin-ui').style.display = 'block';
 
-    // ปลดล็อกเสียงเรียก (จำเป็นสำหรับมือถือ)
-    function setupSilentUnlock() {
-        const unlock = () => {
-            if (soundUnlocked) return;
-            const s1 = document.getElementById('orderDoneSound');
-            const s2 = document.getElementById('msgNotifySound');
-            const u = (s) => {
-                s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => {});
-            };
-            u(s1); u(s2);
+    // ปลดล็อกเสียง
+    window.addEventListener('click', () => {
+        if (!soundUnlocked) {
+            document.getElementById('orderDoneSound').play().then(() => document.getElementById('orderDoneSound').pause());
             soundUnlocked = true;
-            if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission();
-            }
-        };
-        window.addEventListener('click', unlock, { once: true });
-        window.addEventListener('touchstart', unlock, { once: true });
-    }
+        }
+    }, { once: true });
 
-    async function triggerPushNotification(title, message) {
-        try {
-            await _supabase.from('push_queue').insert([{ title: title, message: message }]);
-        } catch(e) { console.log("Push Error"); }
-    }
-
-    // 🟢 แก้ไข: บังคับใส่ MIME Type ลงในแท็ก Audio เพื่อให้ Android ยอมรับ
     function renderChatContent(text) {
         if (typeof text !== 'string') return text;
-        
-        const isSupabaseUrl = text.includes('supabase.co/storage/v1/object/public');
-        
-        if (isSupabaseUrl) {
-            // ตรวจสอบรูปภาพ
-            if (text.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|svg)/) || text.includes('img_')) {
+        if (text.includes('supabase.co/storage')) {
+            if (text.match(/\.(jpeg|jpg|gif|png|webp)/i) || text.includes('img_')) {
                 return `<img src="${text}" class="chat-img" onclick="window.open(this.src)">`;
-            } 
-            // ตรวจสอบไฟล์เสียง (แก้ไขเพื่อ Android)
-            if (text.toLowerCase().match(/\.(webm|mp3|wav|m4a|ogg)/) || text.includes('voice_')) {
-                return `<audio controls preload="metadata" class="chat-audio">
-                            <source src="${text}" type="audio/webm">
-                            <source src="${text}" type="audio/mpeg">
-                            Browser ไม่รองรับการเล่นเสียง
-                        </audio>`;
+            }
+            if (text.match(/\.(webm|mp3|wav|m4a|voice)/i) || text.includes('voice_')) {
+                return `<audio controls class="chat-audio" src="${text}"></audio>`;
             }
         }
         return text;
     }
 
-    // ระบบอัปโหลดไฟล์ (ระบุ Content-Type ให้ชัดเจนสำหรับ Android)
     async function uploadFile(file, prefix = 'img') {
-        const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        
-        // บังคับ MIME Type
-        const options = {};
-        if (prefix === 'voice') options.contentType = 'audio/webm';
-        
-        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file, options);
-        if (error) {
-            alert('อัปโหลดไฟล์ไม่สำเร็จ!');
-            return null;
-        }
-        const { data: { publicUrl } } = _supabase.storage.from('chat-attachments').getPublicUrl(fileName);
-        return publicUrl;
+        const name = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const { error } = await _supabase.storage.from('chat-attachments').upload(name, file);
+        if (error) return null;
+        return _supabase.storage.from('chat-attachments').getPublicUrl(name).data.publicUrl;
     }
 
-    // ระบบอัดเสียง (บังคับ Codec Opus เพื่อ Android)
     async function toggleVoice(id, type) {
         const btn = document.getElementById(`btn-voice-${id}`);
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                // เช็ค Codec ที่ดีที่สุดสำหรับ Android
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-                                 ? 'audio/webm;codecs=opus' : 'audio/webm';
-                
-                mediaRecorder = new MediaRecorder(stream, { mimeType });
-                audioChunks = [];
-                
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const url = await uploadFile(audioBlob, 'voice');
-                    if (url) {
-                        if (type === 'admin') {
-                            sendAdminNote(id, url);
-                        } else {
-                            sendReply(id, myName, url);
-                        }
-                    }
-                    btn.classList.remove('recording');
-                    btn.innerHTML = `<i class="fa-solid fa-microphone"></i> เสียง`;
-                };
-
-                mediaRecorder.start();
-                btn.classList.add('recording');
-                btn.innerHTML = `<i class="fa-solid fa-stop"></i> หยุดอัด`;
-            } catch(e) {
-                alert('กรุณาอนุญาตการใช้ไมโครโฟน');
-            }
-        } else {
-            mediaRecorder.stop();
-        }
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const url = await uploadFile(new Blob(audioChunks, { type: 'audio/webm' }), 'voice');
+                if (url) type === 'admin' ? await sendAdminNote(id, url) : await sendReply(id, myName, url);
+                btn.classList.remove('recording');
+                btn.innerHTML = `<i class="fa-solid fa-microphone"></i> เสียง`;
+            };
+            mediaRecorder.start();
+            btn.classList.add('recording');
+            btn.innerHTML = `<i class="fa-solid fa-stop"></i> หยุด`;
+        } else { mediaRecorder.stop(); }
     }
 
-    // ระบบเลือกรูป
     function triggerImage(id, type) {
         const input = document.getElementById('file-input');
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (file) {
                 const url = await uploadFile(file, 'img');
-                if (url) {
-                    if (type === 'admin') {
-                        sendAdminNote(id, url);
-                    } else {
-                        sendReply(id, myName, url);
-                    }
-                }
+                if (url) type === 'admin' ? await sendAdminNote(id, url) : await sendReply(id, myName, url);
             }
         };
         input.click();
     }
 
-    function maskName(name) {
-        if(!name) return "ลูกค้า";
-        if(name.length <= 2) return name + "***";
-        return name.substring(0, 2) + "***";
-    }
-
-    // ฟังก์ชันวาดหน้าจอ (ห้ามตัดทอนบรรทัด)
     async function refreshOrders() {
         const { data: orders, error } = await _supabase.from('orders').select('*').order('created_at', { ascending: true });
         if (error) return;
 
         const activeOrders = orders.filter(o => {
-            if (o.status === 'done') {
-                const orderTime = new Date(o.created_at).getTime();
-                return (new Date().getTime() - orderTime) < 3600000;
-            }
+            if (o.status === 'done') return (new Date().getTime() - new Date(o.created_at).getTime()) < 3600000;
             return true;
         });
 
-        // เช็คการแจ้งเตือน
         activeOrders.forEach(o => {
             const prev = lastDataState[o.id];
-            if (prev) {
-                if (o.customer_name === myName) {
-                    if ((prev.status === 'cooking' && o.status === 'done') || (o.call_trigger > (prev.call_trigger || 0))) {
-                        if (soundUnlocked) document.getElementById('orderDoneSound').play();
-                    } else if (o.admin_note !== prev.admin_note) {
-                        if (soundUnlocked) document.getElementById('msgNotifySound').play();
-                    }
-                }
+            if (prev && o.customer_name === myName) {
+                if (o.admin_note !== prev.admin_note && soundUnlocked) document.getElementById('msgNotifySound').play();
             }
             lastDataState[o.id] = o;
         });
 
-        // 1. วาดคิวรวม
+        // คิวรวม
         let cookingCount = 0;
-        let queueHTML = activeOrders.length === 0 ? '<div style="text-align:center; color:#999; padding:10px;">ไม่มีคิวจ้า</div>' : "";
-        activeOrders.forEach((o, index) => {
+        let qHTML = "";
+        activeOrders.forEach((o, i) => {
             if (o.status === 'cooking') cookingCount++;
-            queueHTML += `
-                <div class="queue-row">
-                    <b>คิวที่ ${index+1} - คุณ ${maskName(o.customer_name)}</b>
-                    <span style="color:${o.status==='done'?'green':'orange'}; font-weight:bold;">
-                        ${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}
-                    </span>
-                </div>`;
+            qHTML += `<div class="queue-row"><span>คิวที่ ${i+1} - คุณ ${o.customer_name.substring(0,2)}***</span> <b>${o.status==='done'?'✅':'👨‍🍳'}</b></div>`;
         });
         document.getElementById('queue-count').innerText = cookingCount;
-        document.getElementById('public-queue-list').innerHTML = queueHTML;
+        document.getElementById('public-queue-list').innerHTML = qHTML || "ยังไม่มีออเดอร์";
 
-        // 2. วาดออเดอร์ของฉัน (ฝั่งลูกค้า)
+        // ฝั่งลูกค้า
         const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
-        const listDiv = document.getElementById('order-list');
-        if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุด</p>`;
-        } else {
-            listDiv.innerHTML = myOrders.map(o => {
-                let chatLog = [];
-                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) {}
-                
-                return `
-                    <div class="order-item ${o.status==='done' ? 'status-done' : ''}">
-                        <span class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">
-                            ${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}
-                        </span>
-                        <div style="font-weight:bold; margin-bottom:10px;">${o.order_details}</div>
-                        
-                        <div class="chat-container">
-                            ${chatLog.map(c => `
-                                <div class="msg-bubble ${c.sender==='admin'?'msg-admin':'msg-customer'}">
-                                    ${renderChatContent(c.text)}
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <div class="chat-input-area">
-                            <input type="text" id="rep_${o.id}" class="chat-text-input" placeholder="พิมพ์คุยกับร้าน..." onkeypress="if(event.key==='Enter') sendReply('${o.id}', '${myName}')">
-                            <div class="chat-button-group">
-                                <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'customer')">
-                                    <i class="fa-solid fa-camera"></i> รูป/สลิป
-                                </button>
-                                <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'customer')">
-                                    <i class="fa-solid fa-microphone"></i> เสียง
-                                </button>
-                                <button class="btn-chat-action btn-send" onclick="sendReply('${o.id}', '${myName}')">
-                                    <i class="fa-solid fa-paper-plane"></i> ส่ง
-                                </button>
-                            </div>
+        document.getElementById('order-list').innerHTML = myOrders.map(o => {
+            let log = []; try { log = JSON.parse(o.admin_note) || []; } catch(e) {}
+            return `
+                <div class="order-item">
+                    <div class="status-badge">${o.status==='done'?'เสร็จแล้ว':'กำลังทำ'}</div>
+                    <div style="font-weight:bold;">${o.order_details}</div>
+                    <div class="chat-container">${log.map(c => `<div class="msg-bubble ${c.sender==='admin'?'msg-admin':'msg-customer'}">${renderChatContent(c.text)}</div>`).join('')}</div>
+                    <div class="chat-input-area">
+                        <input type="text" id="rep_${o.id}" class="chat-text-input" placeholder="แชทหาแอดมิน...">
+                        <div class="chat-button-group">
+                            <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'customer')">รูป</button>
+                            <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'customer')">เสียง</button>
+                            <button class="btn-chat-action btn-send" onclick="sendReply('${o.id}', '${myName}')">ส่ง</button>
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
+                </div>`;
+        }).join('') || "ไม่พบออเดอร์ของคุณ";
 
-        // 3. วาดหลังบ้าน (ฝั่งแอดมิน)
+        // ฝั่งแอดมิน
         if (isAdminActive) {
-            const adminList = document.getElementById('admin-order-list');
-            adminList.innerHTML = [...activeOrders].reverse().map(o => {
-                let chatLog = [];
-                try { chatLog = JSON.parse(o.admin_note) || []; } catch(e) {}
-                
+            document.getElementById('admin-order-list').innerHTML = [...activeOrders].reverse().map(o => {
+                let log = []; try { log = JSON.parse(o.admin_note) || []; } catch(e) {}
                 return `
-                    <div class="order-item" style="border-left-color: #333;">
-                        <b>คุณ ${o.customer_name}</b> [สถานะ: ${o.status}]
-                        <div style="font-size:0.85em; margin-bottom:10px; color:#666;">${o.order_details}</div>
-                        
-                        <div class="chat-container">
-                            ${chatLog.map(c => `
-                                <div class="msg-bubble ${c.sender==='admin'?'msg-admin':'msg-customer'}">
-                                    ${renderChatContent(c.text)}
-                                </div>
-                            `).join('')}
-                        </div>
-
+                    <div class="order-item">
+                        <b>คุณ ${o.customer_name}</b> (${o.status})
+                        <div class="chat-container">${log.map(c => `<div class="msg-bubble ${c.sender==='admin'?'msg-admin':'msg-customer'}">${renderChatContent(c.text)}</div>`).join('')}</div>
                         <div class="chat-input-area">
-                            <input type="text" id="note_${o.id}" class="chat-text-input" placeholder="ตอบกลับลูกค้า..." onkeypress="if(event.key==='Enter') sendAdminNote('${o.id}')">
+                            <input type="text" id="note_${o.id}" class="chat-text-input" placeholder="ตอบลูกค้า...">
                             <div class="chat-button-group">
-                                <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'admin')">
-                                    <i class="fa-solid fa-camera"></i> ส่งรูป
-                                </button>
-                                <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'admin')">
-                                    <i class="fa-solid fa-microphone"></i> ส่งเสียง
-                                </button>
-                                <button class="btn-chat-action btn-send" onclick="sendAdminNote('${o.id}')">
-                                    <i class="fa-solid fa-paper-plane"></i> แชท
-                                </button>
+                                <button class="btn-chat-action btn-img" onclick="triggerImage('${o.id}', 'admin')">รูป</button>
+                                <button class="btn-chat-action btn-voice" id="btn-voice-${o.id}" onclick="toggleVoice('${o.id}', 'admin')">เสียง</button>
+                                <button class="btn-chat-action btn-send" onclick="sendAdminNote('${o.id}')">ส่ง</button>
                             </div>
                         </div>
-                        
-                        <div style="display:flex; gap:5px; margin-top:10px;">
-                            <button class="btn-adm-control" style="background:var(--warning-color)" onclick="callCustomer('${o.id}')">🔔 เรียกรับ</button>
+                        <div style="display:flex; gap:5px;">
                             <button class="btn-adm-control" style="background:var(--success-color)" onclick="updateStatus('${o.id}', 'done')">✅ เสร็จ</button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
         }
-        
-        // Auto Scroll แชท
-        document.querySelectorAll('.chat-container').forEach(el => {
-            el.scrollTop = el.scrollHeight;
-        });
+        document.querySelectorAll('.chat-container').forEach(el => el.scrollTop = el.scrollHeight);
     }
 
     async function sendAdminNote(id, fileUrl = null) {
         const input = document.getElementById(`note_${id}`);
-        const msg = fileUrl || input.value.trim();
+        const msg = fileUrl || (input ? input.value.trim() : "");
         if(!msg) return;
-
-        const { data } = await _supabase.from('orders').select('admin_note').eq('id', id).single();
-        let chatLog = JSON.parse(data.admin_note) || [];
-        chatLog.push({ sender: 'admin', text: msg });
-        
-        await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog) }).eq('id', id);
-        triggerPushNotification("MAMA WRAP", fileUrl ? "📷 ส่งไฟล์ภาพ/เสียงให้คุณ" : "🏠 ร้านตอบแชท: " + msg);
+        const {data} = await _supabase.from('orders').select('admin_note').eq('id', id).single();
+        let log = JSON.parse(data.admin_note) || [];
+        log.push({ sender: 'admin', text: msg });
+        await _supabase.from('orders').update({ admin_note: JSON.stringify(log) }).eq('id', id);
         if(!fileUrl) input.value = "";
         refreshOrders();
     }
 
     async function sendReply(id, cusName, fileUrl = null) {
         const input = document.getElementById(`rep_${id}`);
-        const msg = fileUrl || input.value.trim();
+        const msg = fileUrl || (input ? input.value.trim() : "");
         if(!msg) return;
-
-        const { data } = await _supabase.from('orders').select('admin_note').eq('id', id).single();
-        let chatLog = JSON.parse(data.admin_note) || [];
-        chatLog.push({ sender: 'customer', text: msg });
-        
-        await _supabase.from('orders').update({ 
-            admin_note: JSON.stringify(chatLog), 
-            customer_note: (fileUrl ? "[ส่งไฟล์]" : msg) 
-        }).eq('id', id);
-        
-        triggerPushNotification("Admin MAMA WRAP", `🙋‍♂️ คุณ ${cusName} ส่งแชทมา: ${fileUrl ? '[ไฟล์]' : msg}`);
+        const {data} = await _supabase.from('orders').select('admin_note').eq('id', id).single();
+        let log = JSON.parse(data.admin_note) || [];
+        log.push({ sender: 'customer', text: msg });
+        await _supabase.from('orders').update({ admin_note: JSON.stringify(log), customer_note: (fileUrl?"[ไฟล์]":msg) }).eq('id', id);
         if(!fileUrl) input.value = "";
         refreshOrders();
     }
 
-    async function callCustomer(id) {
-        const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
-        await _supabase.from('orders').update({ call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
-        triggerPushNotification("MAMA WRAP", "🔔 ร้านเรียกรับอาหารครับ!");
-    }
+    async function updateStatus(id, s) { await _supabase.from('orders').update({ status: s }).eq('id', id); refreshOrders(); }
+    function logoutAdmin() { localStorage.removeItem('isMAMAWrapAdmin'); location.reload(); }
+    async function clearAllOrders() { if(confirm('ล้างทั้งหมด?')) { await _supabase.from('orders').delete().neq('id', 0); refreshOrders(); } }
 
-    async function updateStatus(id, s) { 
-        await _supabase.from('orders').update({ status: s }).eq('id', id); 
-        if (s === 'done') triggerPushNotification("MAMA WRAP", "✅ อาหารของคุณเสร็จแล้วครับ!");
-        refreshOrders(); 
-    }
+    _supabase.channel('orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
-    function logoutAdmin() {
-        localStorage.removeItem('isMAMAWrapAdmin');
-        location.reload();
-    }
-
-    async function clearAllOrders() {
-        if(confirm('⚠️ ล้างคิวทั้งหมดในระบบ?')) {
-            await _supabase.from('orders').delete().neq('id', 0);
-            refreshOrders();
-        }
-    }
-
-    // Realtime Sync
-    _supabase.channel('orders-live').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
-
-    // Secret Admin Mode
     let timer;
     document.getElementById('secret-trigger').onmousedown = document.getElementById('secret-trigger').ontouchstart = () => {
-        timer = setTimeout(() => {
-            if (prompt("รหัสแอดมิน:") === "0420") {
-                localStorage.setItem('isMAMAWrapAdmin', 'true');
-                location.reload();
-            }
-        }, 2000);
+        timer = setTimeout(() => { if (prompt("รหัส:") === "0420") { localStorage.setItem('isMAMAWrapAdmin', 'true'); location.reload(); } }, 2000);
     };
-    document.getElementById('secret-trigger').onmouseup = document.getElementById('secret-trigger').ontouchend = () => clearTimeout(timer);
 
-    setupSilentUnlock();
     refreshOrders();
 </script>
 </body>
