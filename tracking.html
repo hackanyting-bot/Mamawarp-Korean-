@@ -65,9 +65,13 @@
             text-align: center;
         }
 
+        /* 🟢 ใหม่: ส่วนนำทาง PWA & แบตเตอรี่ */
+        #pwa-guide { display: none; background: #fffde7; border: 2px solid #fbc02d; padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: left; font-size: 0.9em; }
+        .guide-step { margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; }
+        .step-num { background: #fbc02d; color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+
         h2 { color: var(--primary-color); margin-bottom: 20px; font-size: 1.5em; }
 
-        /* มอนิเตอร์คิวรวม */
         .queue-monitor {
             background: #fff3e0;
             border: 2px solid #ffcc80;
@@ -100,10 +104,17 @@
         /* ระบบแชท */
         .admin-msg-box { background: #fff3e0; border: 1px solid #ffcc80; padding: 10px; border-radius: 12px; margin-top: 8px; color: #d32f2f; font-size: 0.9em; text-align: left; }
         .customer-msg-box { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 10px; border-radius: 12px; margin-top: 8px; color: #2e7d32; font-size: 0.9em; text-align: right; align-self: flex-end; }
-        .chat-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; font-family: 'Kanit'; box-sizing: border-box; font-size: 1em; }
-        .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 12px; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; font-weight: bold; }
+        
+        /* 🟢 ใหม่: ปรับปรุงช่องแชทส่งรูป/เสียง */
+        .chat-input-group { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+        .chat-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-family: 'Kanit'; box-sizing: border-box; font-size: 1em; }
+        .chat-tools { display: flex; gap: 5px; }
+        .btn-tool { flex: 1; padding: 10px; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; font-size: 0.8em; }
+        .btn-send-chat { background: var(--primary-color); color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; width: 100%; font-weight: bold; }
+        
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; border: 1px solid #ddd; }
+        .chat-audio { width: 100%; margin-top: 5px; height: 35px; }
 
-        /* รายการออเดอร์ */
         .order-item {
             background: #fff;
             border: 1px solid #eee;
@@ -129,7 +140,6 @@
         .customer-info { font-size: 0.9em; color: #666; margin-bottom: 5px; }
         .order-details { font-size: 1em; color: #333; font-weight: 400; line-height: 1.4; }
 
-        /* Admin UI */
         #admin-ui { display: none; width: 100%; border-top: 2px dashed #ccc; padding-top: 20px; margin-top: 20px; }
         .admin-actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-family: 'Kanit'; font-weight: 600; cursor: pointer; color: white; font-size: 0.9em; min-width: 30%; }
@@ -140,7 +150,6 @@
         .back-link { text-decoration: none; color: white; background: #333; padding: 12px; border-radius: 10px; display: block; margin-top: 15px; font-weight: bold; text-align: center; }
         #secret-trigger { margin-top: 60px; color: #ddd; font-size: 0.7em; padding: 20px; user-select: none; -webkit-user-select: none; }
 
-        /* แถบแชท */
         .chat-container { scroll-behavior: smooth; }
         .chat-container::-webkit-scrollbar { width: 4px; }
         .chat-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
@@ -152,6 +161,19 @@
 <audio id="msgNotifySound" src="notify.mp3" preload="auto"></audio>
 
 <div class="container">
+    <div id="pwa-guide">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #d32f2f;">🚨 เพื่อไม่ให้พลาดเสียงเรียก (สำคัญมาก!)</div>
+        <div class="guide-step">
+            <div class="step-num">1</div>
+            <div>กด <b>แชร์ (Share)</b> แล้วเลือก <b>"เพิ่มลงหน้าจอโฮม"</b> เพื่อใช้งานเป็นแอป</div>
+        </div>
+        <div class="guide-step">
+            <div class="step-num">2</div>
+            <div>(สำหรับ Android) กดค้างที่ไอแอป > ข้อมูลแอป > แบตเตอรี่ > เลือก <b>"ไม่จำกัด"</b></div>
+        </div>
+        <button onclick="document.getElementById('pwa-guide').style.display='none'" style="width:100%; border:none; background:#ffeb3b; padding:8px; border-radius:8px; font-weight:bold; cursor:pointer;">ตกลง รับทราบ!</button>
+    </div>
+
     <div class="queue-monitor">
         <div class="queue-header">
             📊 คิวหน้าร้านตอนนี้<br>
@@ -179,7 +201,9 @@
     </div>
 </div>
 
-<div id="secret-trigger">MAMA WRAP SYSTEM v2.8</div>
+<div id="secret-trigger">MAMA WRAP SYSTEM v2.9</div>
+
+<input type="file" id="file-input" style="display:none;" accept="image/*">
 
 <script>
     const SUPABASE_URL = 'https://chomrpeichvhabaslsvr.supabase.co';
@@ -189,21 +213,19 @@
     const myName = localStorage.getItem('customerName') || "";
     let lastDataState = {};
     let soundUnlocked = false;
+    let mediaRecorder;
+    let audioChunks = [];
 
-    // โหลดสถานะ Admin จาก localStorage
-    let isAdminActive = localStorage.getItem('isMAMAWrapAdmin') === 'true';
-    if (isAdminActive) {
-        document.getElementById('admin-ui').style.display = 'block';
+    // เช็คว่าอยู่ในโหมดแอปหรือยัง ถ้ายังให้โชว์ Guide
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+        document.getElementById('pwa-guide').style.display = 'block';
     }
 
-    // ฟังก์ชันคืนชีพตอนตื่นจากพื้นหลัง
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-            refreshOrders();
-        }
-    });
+    let isAdminActive = localStorage.getItem('isMAMAWrapAdmin') === 'true';
+    if (isAdminActive) document.getElementById('admin-ui').style.display = 'block';
 
-    // ระบบแอบปลดล็อกเสียงเงียบๆ และขอสิทธิ์แจ้งเตือนระบบ
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshOrders(); });
+
     function setupSilentUnlock() {
         const unlock = () => {
             if (soundUnlocked) return;
@@ -212,38 +234,20 @@
             const u = (s) => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => {}); };
             u(s1); u(s2);
             soundUnlocked = true;
-
-            if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission();
-            }
+            if ("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
         };
         window.addEventListener('click', unlock, { once: true });
         window.addEventListener('touchstart', unlock, { once: true });
     }
 
     function showSystemNotification(title, body) {
-        if ("Notification" in window && Notification.permission === "granted") {
-            if (document.visibilityState !== 'visible') {
-                new Notification(title, { body: body });
-            }
+        if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== 'visible') {
+            new Notification(title, { body: body });
         }
     }
 
-    function playOrderDone() {
-        if (soundUnlocked) {
-            const audio = document.getElementById('orderDoneSound');
-            audio.currentTime = 0; audio.play().catch(e => {});
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        }
-    }
-
-    function playMsgNotify() {
-        if (soundUnlocked) {
-            const audio = document.getElementById('msgNotifySound');
-            audio.currentTime = 0; audio.play().catch(e => {});
-            if (navigator.vibrate) navigator.vibrate([200]);
-        }
-    }
+    function playOrderDone() { if (soundUnlocked) { const a = document.getElementById('orderDoneSound'); a.currentTime = 0; a.play(); if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } }
+    function playMsgNotify() { if (soundUnlocked) { const a = document.getElementById('msgNotifySound'); a.currentTime = 0; a.play(); if (navigator.vibrate) navigator.vibrate([200]); } }
 
     function maskName(name) {
         if(!name) return "ลูกค้า";
@@ -251,7 +255,6 @@
         return name.substring(0, 2) + "***";
     }
 
-    // ฟังก์ชันออกจากระบบแอดมิน
     function logoutAdmin() {
         if(!confirm('ต้องการออกจากโหมดแอดมินใช่ไหม?')) return;
         localStorage.removeItem('isMAMAWrapAdmin');
@@ -260,17 +263,20 @@
         refreshOrders();
     }
 
-    // 🟢 ฟังก์ชันหลักสำหรับยิงแจ้งเตือนทะลุหน้าจอ (เวอร์ชันนินจา ทะลวง CORS ผ่าน Supabase)
     async function triggerPushNotification(title, message) {
-        try {
-            // โยนข้อความเข้าตาราง push_queue เดี๋ยวฐานข้อมูล Supabase จะรับจบยิง OneSignal ให้เอง!
-            await _supabase.from('push_queue').insert([{ title: title, message: message }]);
-        } catch(e) {
-            console.log("Push Error:", e);
-        }
+        try { await _supabase.from('push_queue').insert([{ title: title, message: message }]); } catch(e) { console.log("Push Error:", e); }
     }
 
-    // ฟังก์ชันช่วยดึงข้อความล่าสุดแบบปลอดภัย 100% ไม่พังตอนค่าว่าง
+    // ฟังก์ชันใหม่: แสดงผลเนื้อหาแชท (ตรวจว่าเป็นรูป/เสียง หรือไม่)
+    function renderChatContent(text) {
+        if (text.startsWith('http') && (text.match(/\.(jpeg|jpg|gif|png|webp)$/) != null)) {
+            return `<img src="${text}" class="chat-img" onclick="window.open(this.src)">`;
+        } else if (text.startsWith('http') && (text.match(/\.(webm|mp3|wav|m4a|ogg)$/) != null)) {
+            return `<audio controls class="chat-audio" src="${text}"></audio>`;
+        }
+        return text;
+    }
+
     function extractLatestText(noteStr, expectedSender) {
         if (!noteStr) return null;
         try {
@@ -280,10 +286,57 @@
                 if (lastMsg.sender === expectedSender) return lastMsg.text;
                 return null;
             }
-        } catch(e) {
-            return noteStr;
-        }
+        } catch(e) { return noteStr; }
         return null;
+    }
+
+    // 🟢 ใหม่: ฟังก์ชันอัปโหลดไฟล์ (รูป/เสียง) ไปที่ Supabase Storage
+    async function uploadFile(file, prefix = 'img') {
+        const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const { data, error } = await _supabase.storage.from('chat-attachments').upload(fileName, file);
+        if (error) { alert('อัปโหลดไฟล์ไม่สำเร็จ!'); return null; }
+        const { data: { publicUrl } } = _supabase.storage.from('chat-attachments').getPublicUrl(fileName);
+        return publicUrl;
+    }
+
+    // 🟢 ใหม่: ระบบอัดเสียง
+    async function toggleVoice(id, type) {
+        const btn = document.getElementById(`btn-voice-${id}`);
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const url = await uploadFile(audioBlob, 'voice');
+                if (url) {
+                    if (type === 'admin') sendAdminNote(id, url);
+                    else sendReply(id, myName, url);
+                }
+                btn.style.background = "#555"; btn.innerText = "🎤 อัดเสียง";
+            };
+            mediaRecorder.start();
+            btn.style.background = "#d32f2f"; btn.innerText = "🛑 หยุดอัด";
+        } else {
+            mediaRecorder.stop();
+        }
+    }
+
+    // 🟢 ใหม่: ระบบส่งรูป
+    function triggerImage(id, type) {
+        const input = document.getElementById('file-input');
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = await uploadFile(file, 'img');
+                if (url) {
+                    if (type === 'admin') sendAdminNote(id, url);
+                    else sendReply(id, myName, url);
+                }
+            }
+        };
+        input.click();
     }
 
     async function refreshOrders() {
@@ -301,41 +354,18 @@
         activeOrders.forEach(o => {
             const prev = lastDataState[o.id];
             if (prev) {
-                // ฝั่งลูกค้า
                 if (o.customer_name === myName) {
                     if ((prev.status === 'cooking' && o.status === 'done') || (o.call_trigger > (prev.call_trigger || 0))) {
-                        playOrderDone();
-                        showSystemNotification("MAMA WRAP", "อาหารของคุณเสร็จแล้ว / ร้านเรียกรับอาหารครับ!");
+                        playOrderDone(); showSystemNotification("MAMA WRAP", "อาหารของคุณเสร็จแล้ว / ร้านเรียกรับอาหารครับ!");
                     } else if (o.admin_note !== prev.admin_note && o.admin_note !== "") {
                         let latestAdminText = extractLatestText(o.admin_note, 'admin');
-                        if (latestAdminText) {
-                            playMsgNotify();
-                            showSystemNotification("MAMA WRAP", "ร้านข้อความมา: " + latestAdminText);
-                        }
+                        if (latestAdminText) { playMsgNotify(); showSystemNotification("MAMA WRAP", "🏠 ร้านส่งข้อความมาหาคุณ!"); }
                     }
                 }
-                
-                // ฝั่ง Admin
                 if (isAdminActive) {
                     let isNewCustomerMsg = false;
-                    let txtToNotify = "";
-
-                    // เช็คจาก JSON แบบใหม่
-                    if (o.admin_note !== prev.admin_note) {
-                        let extracted = extractLatestText(o.admin_note, 'customer');
-                        if (extracted) { isNewCustomerMsg = true; txtToNotify = extracted; }
-                    }
-                    
-                    // เช็คจากข้อมูลระบบเก่าที่ยังใช้ช่อง customer_note อยู่
-                    if (!isNewCustomerMsg && o.customer_note !== prev.customer_note && o.customer_note !== "") {
-                        isNewCustomerMsg = true;
-                        txtToNotify = o.customer_note;
-                    }
-
-                    if (isNewCustomerMsg) {
-                        playMsgNotify();
-                        showSystemNotification("MAMA WRAP Admin", "ลูกค้าตอบกลับ: " + txtToNotify);
-                    }
+                    if (o.admin_note !== prev.admin_note) { if (extractLatestText(o.admin_note, 'customer')) isNewCustomerMsg = true; }
+                    if (isNewCustomerMsg) { playMsgNotify(); showSystemNotification("MAMA WRAP Admin", `🙋‍♂️ คุณ ${o.customer_name} ตอบกลับมา!`); }
                 }
             }
             lastDataState[o.id] = o;
@@ -354,34 +384,33 @@
         // 2. ออเดอร์ของฉัน
         const myOrders = activeOrders.filter(o => o.customer_name === myName).reverse();
         const listDiv = document.getElementById('order-list');
-        if (myOrders.length === 0) {
-            listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุด</p>`;
-        } else {
+        if (myOrders.length === 0) { listDiv.innerHTML = `<p style="color:#999;">ไม่พบออเดอร์ล่าสุด</p>`; } else {
             listDiv.innerHTML = myOrders.map(o => {
                 let chatHTML = "";
                 try {
                     let chatLog = JSON.parse(o.admin_note);
                     if (Array.isArray(chatLog)) {
                         chatLog.forEach(c => {
-                            if (c.sender === 'admin') chatHTML += `<div class="admin-msg-box">🏠 <b>ร้านบอกว่า:</b> ${c.text}</div>`;
-                            else chatHTML += `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${c.text}</div>`;
+                            if (c.sender === 'admin') chatHTML += `<div class="admin-msg-box">🏠 <b>ร้านบอก:</b><br>${renderChatContent(c.text)}</div>`;
+                            else chatHTML += `<div class="customer-msg-box">💬 <b>ฉัน:</b><br>${renderChatContent(c.text)}</div>`;
                         });
                     }
-                } catch(e) {
-                    if (o.admin_note) chatHTML += `<div class="admin-msg-box">🏠 <b>ร้านบอกว่า:</b> ${o.admin_note}</div>`;
-                    if (o.customer_note) chatHTML += `<div class="customer-msg-box">💬 <b>ฉันตอบ:</b> ${o.customer_note}</div>`;
-                }
+                } catch(e) {}
 
                 return `
                     <div class="order-item ${o.status === 'done' ? 'status-done' : ''}">
                         <span class="status-badge ${o.status==='done'?'badge-done':'badge-cooking'}">${o.status==='done'?'✅ เสร็จแล้ว':'👨‍🍳 กำลังทำ'}</span>
                         <div class="customer-info">คุณ ${o.customer_name}</div>
                         <div style="font-size:1em; margin: 5px 0; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">${o.order_details}</div>
-                        <div class="chat-container" style="max-height: 250px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column;">
-                            ${chatHTML}
+                        <div class="chat-container" style="max-height: 250px; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column;">${chatHTML}</div>
+                        <div class="chat-input-group">
+                            <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
+                            <div class="chat-tools">
+                                <button class="btn-tool" style="background:#0288d1;" onclick="triggerImage('${o.id}', 'customer')">📷 รูป</button>
+                                <button class="btn-tool" id="btn-voice-${o.id}" style="background:#555;" onclick="toggleVoice('${o.id}', 'customer')">🎤 เสียง</button>
+                                <button class="btn-tool" style="background:var(--success-color);" onclick="sendReply('${o.id}', '${o.customer_name}')">➡️ ส่ง</button>
+                            </div>
                         </div>
-                        <input type="text" id="rep_${o.id}" class="chat-input" placeholder="พิมพ์คุยกับร้าน...">
-                        <button class="btn-send-chat" onclick="sendReply('${o.id}', '${o.customer_name}')">ส่งข้อความตอบกลับ</button>
                     </div>
                 `;
             }).join('');
@@ -396,25 +425,24 @@
                     let chatLog = JSON.parse(o.admin_note);
                     if (Array.isArray(chatLog)) {
                         chatLog.forEach(c => {
-                            if (c.sender === 'admin') chatHTML += `<div style="color:var(--primary-color); font-weight:bold; margin: 4px 0; text-align: left; background:#fff3e0; padding:8px; border-radius:8px;">🏠 ร้าน: ${c.text}</div>`;
-                            else chatHTML += `<div style="color:var(--success-color); font-weight:bold; margin: 4px 0; text-align: right; background:#e8f5e9; padding:8px; border-radius:8px;">🙋‍♂️ ลูกค้า: ${c.text}</div>`;
+                            if (c.sender === 'admin') chatHTML += `<div style="color:var(--primary-color); font-weight:bold; margin: 4px 0; text-align: left; background:#fff3e0; padding:8px; border-radius:8px;">🏠 ร้าน:<br>${renderChatContent(c.text)}</div>`;
+                            else chatHTML += `<div style="color:var(--success-color); font-weight:bold; margin: 4px 0; text-align: right; background:#e8f5e9; padding:8px; border-radius:8px;">🙋‍♂️ ลูกค้า:<br>${renderChatContent(c.text)}</div>`;
                         });
                     }
-                } catch(e) {
-                    if (o.admin_note) chatHTML += `<div style="color:var(--primary-color); font-weight:bold; margin: 4px 0; text-align: left; background:#fff3e0; padding:8px; border-radius:8px;">🏠 ร้าน: ${o.admin_note}</div>`;
-                    if (o.customer_note) chatHTML += `<div style="color:var(--success-color); font-weight:bold; margin: 4px 0; text-align: right; background:#e8f5e9; padding:8px; border-radius:8px;">🙋‍♂️ ลูกค้า: ${o.customer_note}</div>`;
-                }
+                } catch(e) {}
 
                 return `
-                    <div class="admin-card" style="${o.customer_note ? 'border: 2px solid var(--success-color)' : ''}">
+                    <div class="admin-card">
                         <strong>${o.customer_name}</strong>
                         <div style="font-size:0.8em; margin: 5px 0; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">${o.order_details}</div>
-                        <div class="chat-container" style="max-height: 200px; overflow-y: auto; margin: 10px 0; padding: 5px; background: #fafafa; border-radius: 8px; display: flex; flex-direction: column;">
-                            ${chatHTML}
-                        </div>
+                        <div class="chat-container" style="max-height: 200px; overflow-y: auto; margin: 10px 0; padding: 5px; background: #fafafa; border-radius: 8px; display: flex; flex-direction: column;">${chatHTML}</div>
                         <input type="text" id="note_${o.id}" class="chat-input" placeholder="พิมพ์หาลูกค้า...">
-                        <div class="btn-group-admin">
-                            <button class="btn-adm" style="background:var(--primary-color)" onclick="sendAdminNote('${o.id}')">💬 ส่งข้อความ</button>
+                        <div class="chat-tools" style="margin-top:5px;">
+                            <button class="btn-tool" style="background:#0288d1;" onclick="triggerImage('${o.id}', 'admin')">📷 รูป</button>
+                            <button class="btn-tool" id="btn-voice-${o.id}" style="background:#555;" onclick="toggleVoice('${o.id}', 'admin')">🎤 เสียง</button>
+                            <button class="btn-tool" style="background:var(--primary-color);" onclick="sendAdminNote('${o.id}')">➡️ ส่งแชท</button>
+                        </div>
+                        <div class="btn-group-admin" style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
                             <button class="btn-adm" style="background:var(--warning-color)" onclick="callCustomer('${o.id}')">🔔 เรียก</button>
                             <button class="btn-adm" style="background:var(--success-color)" onclick="updateStatus('${o.id}', 'done')">✅ เสร็จ</button>
                         </div>
@@ -422,89 +450,55 @@
                 `;
             }).join('');
         }
-
-        setTimeout(() => {
-            document.querySelectorAll('.chat-container').forEach(el => { el.scrollTop = el.scrollHeight; });
-        }, 50);
+        setTimeout(() => { document.querySelectorAll('.chat-container').forEach(el => { el.scrollTop = el.scrollHeight; }); }, 50);
     }
 
-    async function sendAdminNote(id) {
+    async function sendAdminNote(id, fileUrl = null) {
         const inputField = document.getElementById(`note_${id}`);
-        const msg = inputField.value.trim();
+        const msg = fileUrl || inputField.value.trim();
         if(!msg) return;
 
-        let o = lastDataState[id] || { admin_note: "", customer_note: "" };
+        let o = lastDataState[id] || { admin_note: "" };
         let chatLog = [];
-        try {
-            let parsed = JSON.parse(o.admin_note);
-            if(Array.isArray(parsed)) chatLog = parsed;
-        } catch(e) {
-            if(o.admin_note) chatLog.push({sender: 'admin', text: o.admin_note});
-            if(o.customer_note) chatLog.push({sender: 'customer', text: o.customer_note});
-        }
+        try { let p = JSON.parse(o.admin_note); if(Array.isArray(p)) chatLog = p; } catch(e) {}
         chatLog.push({sender: 'admin', text: msg});
 
         await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog) }).eq('id', id);
-        
-        // 🟢 ยิงแจ้งเตือน (ส่งจาก Admin)
-        triggerPushNotification("MAMA WRAP", "🏠 ร้านบอกว่า: " + msg);
+        triggerPushNotification("MAMA WRAP", fileUrl ? "📷 ร้านส่งไฟล์ให้คุณ!" : "🏠 ร้านตอบแชท: " + msg);
+        if(!fileUrl) inputField.value = "";
+        refreshOrders();
+    }
 
-        inputField.value = "";
+    async function sendReply(id, cusName, fileUrl = null) {
+        const inputField = document.getElementById(`rep_${id}`);
+        const msg = fileUrl || inputField.value.trim();
+        if(!msg) return;
+
+        let o = lastDataState[id] || { admin_note: "" };
+        let chatLog = [];
+        try { let p = JSON.parse(o.admin_note); if(Array.isArray(p)) chatLog = p; } catch(e) {}
+        chatLog.push({sender: 'customer', text: msg});
+
+        await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog), customer_note: (fileUrl ? "[ส่งไฟล์]" : msg) }).eq('id', id);
+        triggerPushNotification("แอดมิน MAMA WRAP", `🙋‍♂️ คุณ ${cusName} ส่งแชท: ${fileUrl ? '[ไฟล์]' : msg}`);
+        if(!fileUrl) inputField.value = "";
         refreshOrders();
     }
 
     async function callCustomer(id) {
         const { data } = await _supabase.from('orders').select('call_trigger').eq('id', id).single();
         await _supabase.from('orders').update({ call_trigger: (data.call_trigger || 0) + 1 }).eq('id', id);
-        
-        // 🟢 ยิงแจ้งเตือน
         triggerPushNotification("MAMA WRAP", "🔔 ร้านเรียกรับอาหารครับ!");
-    }
-
-    async function sendReply(id, cusName) {
-        const inputField = document.getElementById(`rep_${id}`);
-        const msg = inputField.value.trim();
-        if(!msg) return;
-
-        let o = lastDataState[id] || { admin_note: "", customer_note: "" };
-        let chatLog = [];
-        try {
-            let parsed = JSON.parse(o.admin_note);
-            if(Array.isArray(parsed)) chatLog = parsed;
-        } catch(e) {
-            if(o.admin_note) chatLog.push({sender: 'admin', text: o.admin_note});
-            if(o.customer_note) chatLog.push({sender: 'customer', text: o.customer_note});
-        }
-        chatLog.push({sender: 'customer', text: msg});
-
-        await _supabase.from('orders').update({ admin_note: JSON.stringify(chatLog), customer_note: msg }).eq('id', id);
-        
-        // 🟢 ยิงแจ้งเตือน (ส่งจากลูกค้า หา Admin)
-        triggerPushNotification("แอดมิน MAMA WRAP", `🙋‍♂️ คุณ ${cusName} ตอบกลับ: ${msg}`);
-
-        inputField.value = "";
-        refreshOrders();
     }
 
     async function updateStatus(id, s) { 
         await _supabase.from('orders').update({ status: s }).eq('id', id); 
-        // 🟢 ยิงแจ้งเตือน
         if (s === 'done') triggerPushNotification("MAMA WRAP", "✅ อาหารของคุณเสร็จแล้วครับ!");
         refreshOrders(); 
     }
 
-    async function clearDoneOrders() {
-        if(!confirm('ลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return;
-        await _supabase.from('orders').delete().eq('status', 'done');
-        refreshOrders();
-    }
-
-    async function clearAllOrders() {
-        if(!confirm('⚠️ ล้างออเดอร์ทั้งหมดในระบบ?')) return;
-        const { data } = await _supabase.from('orders').select('id');
-        if (data && data.length > 0) await _supabase.from('orders').delete().in('id', data.map(o => o.id));
-        refreshOrders();
-    }
+    async function clearDoneOrders() { if(!confirm('ลบออเดอร์ที่ "เสร็จแล้ว" ทั้งหมดใช่ไหม?')) return; await _supabase.from('orders').delete().eq('status', 'done'); refreshOrders(); }
+    async function clearAllOrders() { if(!confirm('⚠️ ล้างออเดอร์ทั้งหมดในระบบ?')) return; const { data } = await _supabase.from('orders').select('id'); if (data && data.length > 0) await _supabase.from('orders').delete().in('id', data.map(o => o.id)); refreshOrders(); }
 
     _supabase.channel('orders-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refreshOrders).subscribe();
 
